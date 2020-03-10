@@ -79,9 +79,15 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
 
 #    tree = ROOT.TTree(samplenm,"A ROOT tree");
     #print ROOT.hfile.ls()
-    Dnjetstot=array('d',[0])
-    isSF=array('i',[0])
+    Dnjetstot = array('d',[0])
+    isSF   = array('i',[0])
+    btagW  = array('d',[0])
+    bvetoW = array('d',[0])
+    
     tree.Branch ("Dnjetstot_"+samplenm,Dnjetstot, "Dnjetstot/D");
+    tree.Branch ("btagW_" +samplenm,btagW , "btagW/D");
+    tree.Branch ("bvetoW_"+samplenm,bvetoW, "bvetoW/D");
+
     tree.Branch ("isSF_"+samplenm,isSF, "isSF/I");
 
     #tree.Branch ("hdnjets_df_tag", hdnjets_df_tag, "Dnjets2/F");
@@ -105,21 +111,22 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
         Dnjets=entry.nJet-ncleanJet
         Dnjetstot[0]= Dnjets
         #Bveto
-#        thisflavour=0
-        sameflavour, bweight=flavour_tag(entry, False)
+        btagW[0]=-1
+        bvetoW[0]=-1
+        sameflavour, bvetoW[0]=flavour_tag(entry, False)
         if sameflavour is None : continue
         if sameflavour is True :
-            hdnjets_sf_veto.Fill(Dnjets, bweight)
+            hdnjets_sf_veto.Fill(Dnjets, bvetoW[0])
             print "sf"
             isSF[0]=1
         if sameflavour is False:
-            hdnjets_df_veto.Fill(Dnjets, bweight)
+            hdnjets_df_veto.Fill(Dnjets, bvetoW[0])
             isSF[0]=-1
             #Btag
-        sameflavour, bweight=flavour_tag(entry, True)
+        sameflavour, btagW[0]=flavour_tag(entry, True)
         if sameflavour is None : continue
-        if sameflavour is True : hdnjets_sf_tag.Fill(Dnjets, bweight)
-        if sameflavour is False: hdnjets_df_tag.Fill(Dnjets, bweight)
+        if sameflavour is True : hdnjets_sf_tag.Fill(Dnjets, btagW[0])
+        if sameflavour is False: hdnjets_df_tag.Fill(Dnjets, btagW[0])
         #print "dnjets", Dnjetstot
         tree.Fill()
 
