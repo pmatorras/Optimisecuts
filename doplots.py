@@ -21,7 +21,6 @@ bkgs   = ROOT.TTree("bkgs","A ROOT tree");
 
 
 
-
 #Apply current cuts
 def applycuts(entry):
     passedcut=False
@@ -72,6 +71,19 @@ def flavour_tag(entry, btag):
 #print ttbar_evs.ls()#Draw("CleanJet_pt")
 #print ttbar_evs.GetEntries()#, CleanJet_pt
 
+def SVentries(entry,maxSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2):
+    for iSV in range(0,min(len(entry.SV_eta),maxSV)):
+        SV_eta[iSV]  = entry.SV_eta[iSV]
+        SV_phi[iSV]  = entry.SV_phi[iSV]
+        SV_pt[iSV]   = entry.SV_pt[iSV]
+        SV_mass[iSV] = entry.SV_mass[iSV]
+        SV_x[iSV]    = entry.SV_x[iSV]
+        SV_y[iSV]    = entry.SV_y[iSV]
+        SV_z[iSV]    = entry.SV_z[iSV]
+        SV_chi2[iSV] = entry.SV_chi2[iSV]
+            
+    return
+
 
 def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets_df_tag, samplenm, idxmax=1000):
     #print "TYYPEEES", type(rootfile), type(tree)
@@ -79,17 +91,59 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
 
 #    tree = ROOT.TTree(samplenm,"A ROOT tree");
     #print ROOT.hfile.ls()
-    Dnjetstot = array('d',[0])
-    isSF   = array('i',[0])
-    btagW  = array('d',[0])
-    bvetoW = array('d',[0])
-    
+    maxSV=20
+    evid = array('i',[-999])
+    nSV  = array('i',[-999])
+    Dnjetstot = array('d',[-999])
+    isSF   = array('i',[-999])
+    btagW  = array('d',[-999])
+    bvetoW = array('d',[-999])
+
+    MET_sumEt = array('d',[-999])
+    MET_pt    = array('d',[-999])
+
+    PV_x    = array('d',[-999])
+    PV_y    = array('d',[-999])
+    PV_z    = array('d',[-999])
+    PV_npvs = array('d',[-999])
+    PV_chi2 = array('d',[-999])
+
+    SV_eta  = array('d',maxSV*[-999])
+    SV_phi  = array('d',maxSV*[-999])
+    SV_pt   = array('d',maxSV*[-999])
+    SV_mass = array('d',maxSV*[-999])
+    SV_x    = array('d',maxSV*[-999])
+    SV_y    = array('d',maxSV*[-999])
+    SV_z    = array('d',maxSV*[-999])
+    SV_chi2 = array('d',maxSV*[-999])
+
+    tree.Branch ("evid_"     +samplenm,evid     , "evid/I");
+
     tree.Branch ("Dnjetstot_"+samplenm,Dnjetstot, "Dnjetstot/D");
-    tree.Branch ("btagW_" +samplenm,btagW , "btagW/D");
-    tree.Branch ("bvetoW_"+samplenm,bvetoW, "bvetoW/D");
+    tree.Branch ("btagW_"    +samplenm,btagW    , "btagW/D");
+    tree.Branch ("bvetoW_"   +samplenm,bvetoW   , "bvetoW/D");
+    tree.Branch ("isSF_"     +samplenm,isSF     , "isSF/I");
 
-    tree.Branch ("isSF_"+samplenm,isSF, "isSF/I");
+    tree.Branch ("MET_sumEt_"+samplenm,MET_sumEt, "MET_sumEt/D");
+    tree.Branch ("MET_pt_"   +samplenm,MET_pt   , "MET_pt/D");
 
+    tree.Branch ("PV_x_"   +samplenm,PV_x   , "PV_x/D");
+    tree.Branch ("PV_y_"   +samplenm,PV_y   , "PV_y/D");
+    tree.Branch ("PV_z_"   +samplenm,PV_z   , "PV_z/D");
+    tree.Branch ("PV_npvs_"+samplenm,PV_npvs, "PV_npvs/D");
+    tree.Branch ("PV_chi2_"+samplenm,PV_chi2, "PV_chi2/D");
+
+    tree.Branch ("nSV_" +samplenm,nSV , "nSV/I");
+
+    tree.Branch ("SV_eta_" +samplenm,SV_eta , "SV_eta[nSV]/D");
+    tree.Branch ("SV_phi_" +samplenm,SV_phi , "SV_phi[nSV]/D");
+    tree.Branch ("SV_pt_"  +samplenm,SV_pt  , "SV_pt[nSV]/D");
+    tree.Branch ("SV_mass_"+samplenm,SV_mass, "SV_mass[nSV]/D");
+    tree.Branch ("SV_x_"   +samplenm,SV_x   , "SV_x[nSV]/D");
+    tree.Branch ("SV_y_"   +samplenm,SV_y   , "SV_y[nSV]/D");
+    tree.Branch ("SV_z_"   +samplenm,SV_z   , "SV_z[nSV]/D");
+    tree.Branch ("SV_chi2_"+samplenm,SV_chi2, "SV_chi2[nSV]/D");
+    
     #tree.Branch ("hdnjets_df_tag", hdnjets_df_tag, "Dnjets2/F");
 
     print "looping over", sample, "\nfor",idxmax, "events"
@@ -128,6 +182,28 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
         if sameflavour is True : hdnjets_sf_tag.Fill(Dnjets, btagW[0])
         if sameflavour is False: hdnjets_df_tag.Fill(Dnjets, btagW[0])
         #print "dnjets", Dnjetstot
+        evid[0]=idx
+        MET_sumEt[0] = entry.MET_sumEt
+        MET_pt[0]    = entry.MET_pt
+        
+        PV_x[0]    = entry.PV_x
+        PV_y[0]    = entry.PV_y
+        PV_z[0]    = entry.PV_z
+        PV_npvs[0] = entry.PV_npvs
+        PV_chi2[0] = entry.PV_chi2
+        nSV[0] = len(entry.SV_eta)
+        print "leeeeeeeeeeen", nSV, len(SV_eta)
+        thiseta=array('d',[0])
+        if(len(entry.SV_eta)>(maxSV-18)): print len(entry.SV_eta), maxSV-18, "not working dude" 
+        SVentries(entry,maxSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2)
+        print SV_eta
+        for iSV in range(0,min(len(entry.SV_eta),maxSV)):
+            #SV_eta[iSV]  = entry.SV_eta[iSV]
+            print "pttttttt", entry.SV_pt[iSV]
+        #SV_eta[0]=SV_etab
+        print SV_eta[0], SV_phi[0]
+            #SV_eta.append(thiseta)#entry.SV_eta[iSV])
+        #
         tree.Fill()
 
         #print "output", sameflavour, bweight,"\n------------>IDX:", idx
