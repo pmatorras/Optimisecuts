@@ -1,3 +1,4 @@
+import gc
 from array import array
 import ROOT,os
 import numpy as np
@@ -14,10 +15,11 @@ hdnjets_df_veto_T2tt = ROOT.TH1F( 'hdnjets_df_veto_T2tt', '#Delta(njet-ncleanjet
 hdnjets_sf_tag_T2tt  = ROOT.TH1F( 'hdnjets_sf_tag_T2tt' , '#Delta(njet-ncleanjets)', 12, -1, 10 )
 hdnjets_df_tag_T2tt  = ROOT.TH1F( 'hdnjets_df_tag_T2tt' , '#Delta(njet-ncleanjets)', 12, -1, 10 )
 
-hfile = ROOT.TFile("postcuts.root","RECREATE","Example");
-tree  = ROOT.TTree("tree", "for both")
-signal = ROOT.TTree("signal","A ROOT tree");
-bkgs   = ROOT.TTree("bkgs","A ROOT tree");
+hfilenm="postcuts.root"
+hfile = ROOT.TFile(hfilenm,"RECREATE","Example");
+#tree  = ROOT.TTree("tree", "for both")
+signal_t = ROOT.TTree("signal","A ROOT tree");
+ttbar_t   = ROOT.TTree("bkgs","A ROOT tree");
 
 
 
@@ -72,7 +74,8 @@ def flavour_tag(entry, btag):
 #print ttbar_evs.GetEntries()#, CleanJet_pt
 
 def SVentries(entry,maxSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2):
-    for iSV in range(0,min(len(entry.SV_eta),maxSV)):
+    lastSV=min(len(entry.SV_eta),maxSV)
+    '''for iSV in range(0,lastSV):
         SV_eta[iSV]  = entry.SV_eta[iSV]
         SV_phi[iSV]  = entry.SV_phi[iSV]
         SV_pt[iSV]   = entry.SV_pt[iSV]
@@ -81,19 +84,25 @@ def SVentries(entry,maxSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_
         SV_y[iSV]    = entry.SV_y[iSV]
         SV_z[iSV]    = entry.SV_z[iSV]
         SV_chi2[iSV] = entry.SV_chi2[iSV]
-            
-    return
+
+        print "SV pt[isv]", SV_pt[iSV]
+#    if(lastSV<maxSV):
+#       for idx,entry in enumerate(entry.SV_eta):
+#           if(entry=-999) del entry.SV_eta[idx]
+    print len(entry.SV_eta),maxSV
+    '''
+    return SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2
 
 
-def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets_df_tag, samplenm, idxmax=1000):
+def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets_df_tag,tree, samplenm, idxmax=1000):
     #print "TYYPEEES", type(rootfile), type(tree)
     #tree=ROOT.TTree(samplenm)
 
 #    tree = ROOT.TTree(samplenm,"A ROOT tree");
     #print ROOT.hfile.ls()
     maxSV=20
-    evid = array('i',[-999])
-    nSV  = array('i',[-999])
+    evid = array('i',[-1])
+    nSV  = array('i',[-1])
     Dnjetstot = array('d',[-999])
     isSF   = array('i',[-999])
     btagW  = array('d',[-999])
@@ -102,13 +111,15 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
     MET_sumEt = array('d',[-999])
     MET_pt    = array('d',[-999])
 
-    PV_x    = array('d',[-999])
-    PV_y    = array('d',[-999])
-    PV_z    = array('d',[-999])
-    PV_npvs = array('d',[-999])
-    PV_chi2 = array('d',[-999])
+    PV_x    = array('f',[-999])
+    PV_y    = array('f',[-999])
+    PV_z    = array('f',[-999])
+    PV_npvs = array('f',[-999])
+    PV_chi2 = array('f',[-999])
 
-    SV_eta  = array('d',maxSV*[-999])
+    SV_eta  = array('f',maxSV*[-999])
+    
+
     SV_phi  = array('d',maxSV*[-999])
     SV_pt   = array('d',maxSV*[-999])
     SV_mass = array('d',maxSV*[-999])
@@ -116,7 +127,17 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
     SV_y    = array('d',maxSV*[-999])
     SV_z    = array('d',maxSV*[-999])
     SV_chi2 = array('d',maxSV*[-999])
+    
+    mll     = array('d',[-999])
+    mt2ll   = array('d',[-999])
+    nLepton = array('i',[-999])
+    ptmiss  = array('d',[-999])
 
+    susyMstop = array('f',[-999])
+    #susyMLSP  = array('f',[-999])
+    susyMLSP  = array('f',[-999])
+
+    
     tree.Branch ("evid_"     +samplenm,evid     , "evid/I");
 
     tree.Branch ("Dnjetstot_"+samplenm,Dnjetstot, "Dnjetstot/D");
@@ -127,16 +148,19 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
     tree.Branch ("MET_sumEt_"+samplenm,MET_sumEt, "MET_sumEt/D");
     tree.Branch ("MET_pt_"   +samplenm,MET_pt   , "MET_pt/D");
 
-    tree.Branch ("PV_x_"   +samplenm,PV_x   , "PV_x/D");
-    tree.Branch ("PV_y_"   +samplenm,PV_y   , "PV_y/D");
-    tree.Branch ("PV_z_"   +samplenm,PV_z   , "PV_z/D");
-    tree.Branch ("PV_npvs_"+samplenm,PV_npvs, "PV_npvs/D");
-    tree.Branch ("PV_chi2_"+samplenm,PV_chi2, "PV_chi2/D");
+    tree.Branch ("PV_x_"   +samplenm,PV_x   , "PV_x/F");
+    tree.Branch ("PV_y_"   +samplenm,PV_y   , "PV_y/F");
+    tree.Branch ("PV_z_"   +samplenm,PV_z   , "PV_z/F");
+    tree.Branch ("PV_npvs_"+samplenm,PV_npvs, "PV_npvs/F");
+    tree.Branch ("PV_chi2_"+samplenm,PV_chi2, "PV_chi2/F");
 
-    tree.Branch ("nSV_" +samplenm,nSV , "nSV/I");
+    nSV_b=tree.Branch ("nSV_" +samplenm,nSV , "nSV/I");
 
-    tree.Branch ("SV_eta_" +samplenm,SV_eta , "SV_eta[nSV]/D");
+    
+    tree.Branch ("SV_eta_" +samplenm,SV_eta , "SV_eta[nSV]/F");
+    
     tree.Branch ("SV_phi_" +samplenm,SV_phi , "SV_phi[nSV]/D");
+    
     tree.Branch ("SV_pt_"  +samplenm,SV_pt  , "SV_pt[nSV]/D");
     tree.Branch ("SV_mass_"+samplenm,SV_mass, "SV_mass[nSV]/D");
     tree.Branch ("SV_x_"   +samplenm,SV_x   , "SV_x[nSV]/D");
@@ -144,14 +168,24 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
     tree.Branch ("SV_z_"   +samplenm,SV_z   , "SV_z[nSV]/D");
     tree.Branch ("SV_chi2_"+samplenm,SV_chi2, "SV_chi2[nSV]/D");
     
-    #tree.Branch ("hdnjets_df_tag", hdnjets_df_tag, "Dnjets2/F");
+    tree.Branch ("mll_"       +samplenm,mll    , "mll/D");
+    tree.Branch ("mt2ll_"     +samplenm,mt2ll  , "mt2ll/D");
+    tree.Branch ("nLepton_"   +samplenm,nLepton, "nLepton/I");
+    tree.Branch ("ptmiss_"    +samplenm,ptmiss , "ptmiss/D");
 
-    print "looping over", sample, "\nfor",idxmax, "events"
+    tree.Branch ("susyMLSP__"   +samplenm,susyMLSP , "susyMLSP/F");
+    tree.Branch ("susyMstop_"   +samplenm,susyMstop, "susyMstop/F");
+    #tree.Branch ("susyMLSP_ "   +samplenm,susyMLSP , "susyMLSP/F");
+
+    #tree.Branch ("hdnjets_df_tag", hdnjets_df_tag, "Dnjets2/F");
+    counter=0
+    print "looping over", samplenm, "\nfor",idxmax, "events"
     for idx, entry in enumerate(sample):
         if(idx>idxmax): break
         #apply normal cuts
         if entry.nCleanJet<1: continue
-        if(idx==7532): print "####", idx, entry.CleanJet_pt[0], #entry.leadingPtTagged, entry.MET_phi , entry.CleanJet_phi[0]
+        
+        
         sameflavour = False
         df = False
         btag  = False
@@ -181,54 +215,88 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
         if sameflavour is None : continue
         if sameflavour is True : hdnjets_sf_tag.Fill(Dnjets, btagW[0])
         if sameflavour is False: hdnjets_df_tag.Fill(Dnjets, btagW[0])
-        #print "dnjets", Dnjetstot
+        #print "dnjets", Dnjetstot+
+        counter+=1
+        print "event", idx, "total done", counter 
         evid[0]=idx
         MET_sumEt[0] = entry.MET_sumEt
         MET_pt[0]    = entry.MET_pt
+
         
         PV_x[0]    = entry.PV_x
         PV_y[0]    = entry.PV_y
         PV_z[0]    = entry.PV_z
         PV_npvs[0] = entry.PV_npvs
         PV_chi2[0] = entry.PV_chi2
+        #print "crashes here"
+        #print type(entry.SV_eta)
+        
+        mll[0]     = entry.mll
+        mt2ll[0]   = entry.mt2ll
+        nLepton[0] = entry.nLepton
+        ptmiss[0]  = entry.ptmiss
+        
+        signalopts=["T2tt", "TChipmWW","signal"]
+        if(samplenm in signalopts): 
+            susyMstop[0] = entry.susyMstop
+            susyMLSP[0]  = entry.susyMLSP
+            print "SIIIIIIIIIIIIGNAL", susyMstop[0]
+        
+        #thiseta=array('d',[0])
+        #if(len(entry.SV_eta)>(maxSV)): print "WARNING: more Entries in SV than in the vector to be stored in " 
+        #        SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2=SVentries(entry,maxSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2)
+        lastSV=min(len(entry.SV_eta),maxSV)
+        #print lastSV, len(entry.SV_eta), maxSV
+        #print "i get to nsv"
+        #if(len(entry.SV_eta)>0):
         nSV[0] = len(entry.SV_eta)
-        print "leeeeeeeeeeen", nSV, len(SV_eta)
-        thiseta=array('d',[0])
-        if(len(entry.SV_eta)>(maxSV-18)): print len(entry.SV_eta), maxSV-18, "not working dude" 
-        SVentries(entry,maxSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2)
-        print SV_eta
-        for iSV in range(0,min(len(entry.SV_eta),maxSV)):
-            #SV_eta[iSV]  = entry.SV_eta[iSV]
-            print "pttttttt", entry.SV_pt[iSV]
-        #SV_eta[0]=SV_etab
-        print SV_eta[0], SV_phi[0]
-            #SV_eta.append(thiseta)#entry.SV_eta[iSV])
-        #
+        #print nSV[0], counter
+        
+        for iSV in range(0,2):#lastSV):
+            #continue
+            print iSV, nSV[0]
+            if(iSV<nSV[0]):
+                print len(entry.SV_eta)
+                print "ii", entry.SV_eta[iSV]
+                SV_eta[iSV]  = entry.SV_eta[iSV]
+                SV_phi[iSV]  = entry.SV_phi[iSV]
+                SV_pt[iSV]   = entry.SV_pt[iSV]
+	        SV_mass[iSV] = entry.SV_mass[iSV]
+                SV_x[iSV]    = entry.SV_x[iSV]
+	        SV_y[iSV]    = entry.SV_y[iSV]
+	        SV_z[iSV]    = entry.SV_z[iSV]
+	        SV_chi2[iSV] = entry.SV_chi2[iSV]
+            
+        
+
+
+
+
+        #print SV_eta
+        #nSV.Fill()
         tree.Fill()
-
-        #print "output", sameflavour, bweight,"\n------------>IDX:", idx
-
-        #print "ENTRIES--------\n",tree.Scan("Dnjetstot")
-    print "fill tfile"
- 
-    print "#############################\n"#,tree.Scan("Dnjetstot")
-    #hfile.Close()
+        
+    print "#############################\n", nSV, SV_eta
+    del nSV, SV_eta,SV_pt, SV_mass,SV_x,SV_y, SV_z, SV_chi2
+    #print nSV
+    hfile.cd()
+    tree.Write()
 
     return hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets_df_tag
-#print (eval(ttbar_evs))
 
-#tree.Scan("Dnjetstot")
 ttbar = ROOT.TFile.Open(inputFilettbar ,"READ")
 ttbar_evs= ttbar.Get('Events')
 signal = ROOT.TFile.Open(inputFilesignal ,"READ")
 signal_evs= signal.Get('Events')
 
-#hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar= loopentries(ttbar_evs, hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar, "ttbar",10000)
-hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt= loopentries(signal_evs,hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt, "signal")
-#tree.Scan("Dnjetstot")
-print "here?"
-hfile.cd()
-tree.Write()
+hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar= loopentries(ttbar_evs, hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar,ttbar_t, "ttbar",10000000)
+#gc.collect()
+#hfile.cd()
+#tree.Write()
+
+hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt= loopentries(signal_evs,hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt, signal_t, "signal", 1000000)
+
+print "Writing tree in", hfilenm
 
 c1 = ROOT.TCanvas( 'c1', 'Dynamic Filling Example', 200, 10, 1600, 900 )
 
@@ -249,73 +317,4 @@ makehistos(hdnjets_sf_tag_ttbar,hdnjets_sf_tag_T2tt, "hdnjets_sf_tag")#, display
 makehistos(hdnjets_df_tag_ttbar,hdnjets_df_tag_T2tt, "hdnjets_df_tag")
 makehistos(hdnjets_sf_veto_ttbar,hdnjets_sf_veto_T2tt, "hdnjets_sf_veto")
 makehistos(hdnjets_df_veto_ttbar,hdnjets_df_veto_T2tt, "hdnjets_df_veto")
-'''
-
-
-
-'''
-hdnjets_sf_tag_ttbar.Draw('hist')
-hdnjets_sf_tag_T2tt.SetMarkerColor(2)
-hdnjets_sf_tag_T2tt.SetLineColor(2)
-hdnjets_sf_tag_T2tt.Draw('same')
-c1.SaveAs("hdnjets_sf_tag.png")
-
-hdnjets_df_tag_ttbar.Draw('hist')
-hdnjets_df_tag_T2tt.SetMarkerColor(2)
-hdnjets_df_tag_T2tt.SetLineColor(2)
-hdnjets_df_tag_T2tt.Draw('same')
-c1.SaveAs("hdnjets_df_tag.png")
-'''
-print type(ttbar_evs)
-'''
-hdnjets_df_tag.Draw('hist')
-c1.SaveAs("hdnjets_df_tag.png")
-hdnjets_sf_veto.Draw('hist')
-c1.SaveAs("hdnjets_sf_veto.png")
-hdnjets_sf_tag.Draw('hist')
-c1.SaveAs("hdnjets_df_veto.png")
-'''
-
-#os.system('display hdnjets_sf_tag.png')
-
-
-
-
-
-#c1.SetLogy()                                                                                                                        
-#c1.Modified()
-#c1.Update()
-#c1.SaveAs("try.png")
-#os.system('display try.png')
-
-
-
-'''
-for idx,entry  in enumerate(ttbar_evs):
-    if(idx>10000):
-        break
-    #cuts for sr3
-    metcut=False
-    applycuts(entry,metcut)
-    print metcut
-    if(entry.MET_pt <300): continue
-    if(entry.mll<20 or entry.Lepton_pt[0]<25 or entry.Lepton_pt[1]<20 or entry.Lepton_pdgId[0]*entry.Lepton_pdgId[1]>0): continue
-    #cuts for isr
-    CleanJet_pt=entry.CleanJet_pt
-    ncleanJet=len(CleanJet_pt)
-    if(ncleanJet<1): continue
-    if(entry.CleanJet_pt[0]<150 and entry.CleanJet_pt[0]==entry.leadingPtTagged): continue# and np.arccos(np.cos(entry.MET_phi-entry.CleanJet_phi[0]))<2.5]):continue
-#    if(any(isr)): continue
-    
-    #print idx
-    if(abs(entry.Lepton_pdgId[0])==abs(entry.Lepton_pdgId[1])):
-        print idx,"sf", entry.nGenJet, entry.nJet, ncleanJet
-        hdnjets_sf_tag.Fill(entry.nJet-ncleanJet, entry.btagWeight_1tag)
-    if(abs(entry.Lepton_pdgId[0])!=abs(entry.Lepton_pdgId[1])):
-        continue
-        print "df"
-        #print idx, "after"
-
-    njet=entry.nJet
-    #print ncleanJet-njet
 '''
