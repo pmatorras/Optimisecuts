@@ -55,7 +55,6 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
         if sameflavour is None : continue
         if sameflavour is True :
             hdnjets_sf_veto.Fill(Dnjets, bvetoW[0])
-            print "sf"
             isSF[0]=1
         if sameflavour is False:
             hdnjets_df_veto.Fill(Dnjets, bvetoW[0])
@@ -90,15 +89,13 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
         if(samplenm in signalopts): 
             susyMstop[0] = entry.susyMstop
             susyMLSP[0]  = entry.susyMLSP
-            print "SIIIIIIIIIIIIGNAL", susyMstop[0]
-        
         lastSV=min(len(entry.SV_eta),maxSV)
         nSV[0] = len(entry.SV_eta)
         SVentries(entry,nSV[0], SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2)
 
         tree.Fill()
         
-    print "#############################\n", nSV, SV_eta
+    print "#############################\n"
     del nSV, SV_eta,SV_pt, SV_mass,SV_x,SV_y, SV_z, SV_chi2
     #print nSV
     hfile.cd()
@@ -112,9 +109,6 @@ signal = ROOT.TFile.Open(inputFilesignal ,"READ")
 signal_evs= signal.Get('Events')
 
 hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar= loopentries(ttbar_evs, hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar,ttbar_t, "ttbar",10000)
-#gc.collect()
-#hfile.cd()
-#tree.Write()
 
 hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt= loopentries(signal_evs,hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt, signal_t, "signal", 1000)
 

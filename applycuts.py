@@ -1,4 +1,4 @@
-#Apply current cuts                                                                                         
+#Apply default cuts
 def defaultcuts(entry):
     passedcut=False
     metcut=bool(entry.MET_pt >300)
@@ -7,16 +7,8 @@ def defaultcuts(entry):
     isrcut=bool(entry.CleanJet_pt[0]>150. and entry.CleanJet_pt[0]!=entry.leadingPtTagged and np.arccos(np.cos(entry.MET_phi-entry.CleanJet_phi[0]))>2.5)
     ncleanjets=bool(entry.nCleanJet>1)
     conds=[metcut,lepidcut,occut,isrcut,ncleanjets]
-    if all(conds) is True :print all(conds),  "trueeee"
-    #if(all(metcut,lepidcut,occut,isrcut,ncleanjets) is True): print "this is true"
-    if(entry.MET_pt >300 #METCUT
-       and (entry.Lepton_isTightElectron_cutBasedMediumPOG[0] + entry.Lepton_isTightMuon_mediumRelIsoTight[0]+entry.Lepton_isTightElectron_cutBasedMediumPOG[1]+entry.Lepton_isTightMuon_mediumRelIsoTight[1])==2 #LeptonID
-       and entry.mll>20 and entry.Lepton_pt[0]>25 and entry.Lepton_pt[1]>20  and entry.Lepton_pdgId[0]*entry.Lepton_pdgId[1]<0 #OC
-       and entry.CleanJet_pt[0]>150. and entry.CleanJet_pt[0]!=entry.leadingPtTagged and np.arccos(np.cos(entry.MET_phi-entry.CleanJet_phi[0]))>2.5 #ISR
-       and entry.nCleanJet>1 ): #ncleanjets                                                                 
+    if all(conds) is True :
         passedcut=True
-        print "this shouold also be\n-----------------------------", metcut,lepidcut,occut,isrcut,ncleanjets
-    #print "not this",metcut,lepidcut,occut,isrcut,ncleanjets
     return passedcut
 
 
@@ -52,12 +44,7 @@ def flavour_tag(entry, btag):
 #    print df, sf, "---", sameflavour                                                                       
     return sameflavour,weight
 def SVentries(entry,nSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2):
-    for iSV in range(0,nSV):#lastSV):                                                                       
-        #continue                                                                                           
-        print iSV, nSV
-        #if(iSV<nSV):                                                                                       
-        #print len(entry.SV_eta)                                                                            
-        print "ii", entry.SV_eta[iSV]
+    for iSV in range(0,nSV):#lastSV):            
         SV_eta[iSV]  = entry.SV_eta[iSV]
 	SV_phi[iSV]  = entry.SV_phi[iSV]
 	SV_pt[iSV]   = entry.SV_pt[iSV]
@@ -67,4 +54,4 @@ def SVentries(entry,nSV, SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_ch
         SV_z[iSV]    = entry.SV_z[iSV]
         SV_chi2[iSV] = entry.SV_chi2[iSV]
 
-    return# SV_eta, SV_phi, SV_pt, SV_mass, SV_x, SV_y, SV_z, SV_chi2 
+    return
