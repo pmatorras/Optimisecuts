@@ -4,7 +4,7 @@ def defaultcuts(entry):
     metcut=bool(entry.MET_pt >300)
     lepidcut=bool((entry.Lepton_isTightElectron_cutBasedMediumPOG[0] + entry.Lepton_isTightMuon_mediumRelIsoTight[0]+entry.Lepton_isTightElectron_cutBasedMediumPOG[1]+entry.Lepton_isTightMuon_mediumRelIsoTight[1])==2)
     occut=bool(entry.mll>20 and entry.Lepton_pt[0]>25 and entry.Lepton_pt[1]>20  and entry.Lepton_pdgId[0]*entry.Lepton_pdgId[1]<0)
-    isrcut=bool(entry.CleanJet_pt[0]>150. and entry.CleanJet_pt[0]!=entry.leadingPtTagged and np.arccos(np.cos(entry.MET_phi-entry.CleanJet_phi[0]))>2.5)
+    isrcut=bool(entry.CleanJet_pt[0]>150. and entry.CleanJet_pt[0]!=entry.leadingPtTagged and np.arccos(np.cos(entry.MET_phi-entry.CleanJet_phi[0]))>2.5)#REMEMBER TO CHANGE THIS
     ncleanjets=bool(entry.nCleanJet>1)
     conds=[metcut,lepidcut,occut,isrcut,ncleanjets]
     if all(conds) is True :
