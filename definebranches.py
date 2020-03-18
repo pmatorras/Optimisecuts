@@ -1,10 +1,10 @@
 from array import array
 import ROOT
 hfilenm="output/postcuts.root"
-inputFilettbar  = '../rootfiles/nanoLatino_TTTo2L2Nu__part10.root'
-inputFilesignal = '../rootfiles/nanoLatino_T2tt__mStop-400to1200__part0.root'
-nttbar=100000000
-nT2tt =10000000
+inputFilebkg  = '../rootfiles/nanoLatino_TTTo2L2Nu__part10.root'
+inputFilesignal = '../rootfiles/nanoLatino_T2tt__mStop-400to1200__part1.root'
+#nttbar=10000
+#nT2tt =1000
 def defVectors():
     evid = array('i',[-1])
     maxSV=20

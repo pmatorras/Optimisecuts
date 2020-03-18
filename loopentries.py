@@ -1,4 +1,5 @@
-import gc
+import sys
+import optparse
 from array import array
 import ROOT,os
 import numpy as np
@@ -6,31 +7,16 @@ ROOT.gROOT.SetBatch(0)
 exec(open("definebranches.py").read())
 exec(open("applycuts.py").read())
 
-hfile = ROOT.TFile(hfilenm,"RECREATE","Example");
-inputFilettbar  = '../rootfiles/nanoLatino_TTTo2L2Nu__part10.root'
-inputFilesignal = '../rootfiles/nanoLatino_T2tt__mStop-400to1200__part0.root'
-
-hdnjets_sf_veto_ttbar = ROOT.TH1F( 'hdnjets_sf_veto_ttbar', '#Delta(njet-ncleanjets)', 12, -1, 10 )
-hdnjets_df_veto_ttbar = ROOT.TH1F( 'hdnjets_df_veto_ttbar', '#Delta(njet-ncleanjets)', 12, -1, 10 )
-hdnjets_sf_tag_ttbar  = ROOT.TH1F( 'hdnjets_sf_tag_ttbar' , '#Delta(njet-ncleanjets)', 12, -1, 10 )
-hdnjets_df_tag_ttbar  = ROOT.TH1F( 'hdnjets_df_tag_ttbar' , '#Delta(njet-ncleanjets)', 12, -1, 10 )
-hdnjets_sf_veto_T2tt = ROOT.TH1F( 'hdnjets_sf_veto_T2tt', '#Delta(njet-ncleanjets)', 12, -1, 10 )
-hdnjets_df_veto_T2tt = ROOT.TH1F( 'hdnjets_df_veto_T2tt', '#Delta(njet-ncleanjets)', 12, -1, 10 )
-hdnjets_sf_tag_T2tt  = ROOT.TH1F( 'hdnjets_sf_tag_T2tt' , '#Delta(njet-ncleanjets)', 12, -1, 10 )
-hdnjets_df_tag_T2tt  = ROOT.TH1F( 'hdnjets_df_tag_T2tt' , '#Delta(njet-ncleanjets)', 12, -1, 10 )
-
-#tree  = ROOT.TTree("tree", "for both")
-signal_t = ROOT.TTree("T2tt","A ROOT tree");
-ttbar_t   = ROOT.TTree("ttbar","A ROOT tree");
-
-def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets_df_tag,tree, samplenm, idxmax=1000):
+def loopentries(sample,tree, samplenm, idxmax):
     evid, maxSV, nSV, Dnjetstot,isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
-        PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,\
-        SV_x,SV_y,SV_z,SV_chi2, mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP= defBranches(tree, samplenm)
+    PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,\
+    SV_x,SV_y,SV_z,SV_chi2, mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP= defBranches(tree, samplenm)
     counter=0
     print "looping over", samplenm, "\nfor",idxmax, "events"
     for idx, entry in enumerate(sample):
-        if(idx>idxmax): break
+        if(idx>idxmax):
+            print "reached max number of events"
+            break
         #apply normal cuts
         if entry.nCleanJet<1: continue
         
@@ -39,7 +25,7 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
         df = False
         btag  = False
         bveto = False
-        passedcut=defaultcuts(entry) 
+        passedcut=defaultcuts(entry,samplenm) 
         if passedcut is False:
             continue
     
@@ -50,26 +36,15 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
         #Bveto
         btagW[0]=-1
         bvetoW[0]=-1
-        sameflavour, bvetoW[0]=flavour_tag(entry, False)
-        if sameflavour is None : continue
-        if sameflavour is True :
-            hdnjets_sf_veto.Fill(Dnjets, bvetoW[0])
-            isSF[0]=1
-        if sameflavour is False:
-            hdnjets_df_veto.Fill(Dnjets, bvetoW[0])
-            isSF[0]=-1
-            #Btag
-        sameflavour, btagW[0]=flavour_tag(entry, True)
-        if sameflavour is None : continue
-        if sameflavour is True : hdnjets_sf_tag.Fill(Dnjets, btagW[0])
-        if sameflavour is False: hdnjets_df_tag.Fill(Dnjets, btagW[0])
-        #print "dnjets", Dnjetstot+
+        isSF[0], btagW[0],bvetoW[0]=flavour_tag(entry, samplenm)
+        if isSF[0] ==-999 : continue
+
         counter+=1
         print "event", idx, "total done", counter 
         evid[0]=idx
         MET_sumEt[0] = entry.MET_sumEt
         MET_pt[0]    = entry.MET_pt
-
+        
         
         PV_x[0]    = entry.PV_x
         PV_y[0]    = entry.PV_y
@@ -99,22 +74,52 @@ def loopentries(sample,hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets
     #print nSV
     hfile.cd()
     tree.Write()
+    return 
 
-    return hdnjets_sf_veto, hdnjets_df_veto, hdnjets_sf_tag, hdnjets_df_tag
 
 
-ttbar = ROOT.TFile.Open(inputFilettbar ,"READ")
-ttbar_evs= ttbar.Get('Events')
-signal = ROOT.TFile.Open(inputFilesignal ,"READ")
-signal_evs= signal.Get('Events')
+if __name__ == '__main__':
 
-hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar= loopentries(ttbar_evs, hdnjets_sf_veto_ttbar, hdnjets_df_veto_ttbar, hdnjets_sf_tag_ttbar, hdnjets_df_tag_ttbar,ttbar_t, "ttbar",nttbar)
+    usage = 'usage: %prog [options]'
+    parser = optparse.OptionParser(usage)
 
-hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt= loopentries(signal_evs,hdnjets_sf_veto_T2tt, hdnjets_df_veto_T2tt, hdnjets_sf_tag_T2tt, hdnjets_df_tag_T2tt, signal_t, "T2tt", nT2tt)
+    parser.add_option('--nttbar' , dest='nttbar' , help='# ttbar entries', default=1000000)
+    parser.add_option('--nT2tt' , dest='nT2tt' , help='# ttbar\
+    entries', default=100000)
+    parser.add_option('--signal' , dest='signal' , help='signal file', default=inputFilesignal)
+    parser.add_option('--bkg' , dest='bkg' , help='background file', default=inputFilebkg)
+    parser.add_option('--output' , dest='output' , help='name of output rootfile', default=hfilenm)
+    (opt, args) = parser.parse_args()
+    folder='../rootfiles/'
+    nttbar=int(opt.nttbar)
+    nT2tt=int(opt.nT2tt)
+    if('/' in opt.signal): inputFileT2tt=opt.signal
+    else: inputFileT2tt=folder+opt.signal
+    if('/' in opt.bkg): inputFilettbar=opt.bkg
+    else: inputFilettbar=folder+opt.bkg
+    if('/' in opt.output): hfilenm=opt.output
+    else: hfilenm='../Output/'+opt.output
 
-print "Writing tree in", hfilenm
+    print "signal from", inputFilesignal
+    hfile = ROOT.TFile(hfilenm,"RECREATE","Example");
+    
+    signal_t = ROOT.TTree("T2tt","A ROOT tree");
+    ttbar_t   = ROOT.TTree("ttbar","A ROOT tree");
 
-c1 = ROOT.TCanvas( 'c1', 'Dynamic Filling Example', 200, 10, 1600, 900 )
+
+    ttbar_f = ROOT.TFile.Open(inputFilettbar ,"READ")
+    ttbar_evs= ttbar_f.Get('Events')
+    signal_f = ROOT.TFile.Open(inputFilesignal ,"READ")
+    signal_evs= signal_f.Get('Events')
+
+    print "nttbar", nttbar
+    loopentries(ttbar_evs,ttbar_t, "ttbar",nttbar)
+
+    loopentries(signal_evs, signal_t, "T2tt", nT2tt)
+    
+    print "Writing tree in", hfilenm
+
+    c1 = ROOT.TCanvas( 'c1', 'Dynamic Filling Example', 200, 10, 1600, 900 )
 
 '''
 def makehistos(bkg,signal,name,display=False):
