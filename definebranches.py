@@ -5,7 +5,7 @@ inputFilebkg  = '../rootfiles/nanoLatino_TTTo2L2Nu__part10.root'
 inputFilesignal = '../rootfiles/nanoLatino_T2tt__mStop-400to1200__part1.root'
 #nttbar=10000
 #nT2tt =1000
-def defVectors():
+def defBranches(tree,samplenm):
     evid = array('i',[-1])
     maxSV=20
     nSV  = array('i',[-1])
@@ -40,15 +40,20 @@ def defVectors():
 
     susyMstop = array('f',[-999])
     susyMLSP  = array('f',[-999])
-    
-    return evid, maxSV, nSV, Dnjetstot,isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
-        PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,\
-        SV_x,SV_y,SV_z,SV_chi2, mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP
 
-def defBranches(tree,samplenm):
-    evid, maxSV,nSV, Dnjetstot,isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
-        PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,\
-        SV_x,SV_y,SV_z,SV_chi2,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP= defVectors()
+    nPhoton = array('i',[-999])
+    visHTv3 = array('d',[-999])
+    dphill  = array('d',[-999])
+    lep1_pt = array('d',[-999])
+    lep2_pt = array('d',[-999])
+    dRll    = array('d',[-999])
+    detall  = array('d',[-999])
+    dphijj  = array('d',[-999])
+    dRjj    = array('d',[-999])
+    detajj  = array('d',[-999])
+    jet1_pt = array('d',[-999])
+    jet2_pt = array('d',[-999])
+    #Define tree branches
     tree.Branch ("evid_"     +samplenm,evid     , "evid/I");
     
     tree.Branch ("Dnjetstot_"+samplenm,Dnjetstot, "Dnjetstot/D");
@@ -66,11 +71,8 @@ def defBranches(tree,samplenm):
     tree.Branch ("PV_chi2_"+samplenm,PV_chi2, "PV_chi2/F");
 
     tree.Branch ("nSV_" +samplenm,nSV , "nSV/I");
-
     tree.Branch ("SV_eta_" +samplenm,SV_eta , "SV_eta[nSV]/F");
-
     tree.Branch ("SV_phi_" +samplenm,SV_phi , "SV_phi[nSV]/D");
-
     tree.Branch ("SV_pt_"  +samplenm,SV_pt  , "SV_pt[nSV]/D");
     tree.Branch ("SV_mass_"+samplenm,SV_mass, "SV_mass[nSV]/D");
     tree.Branch ("SV_x_"   +samplenm,SV_x   , "SV_x[nSV]/D");
@@ -86,7 +88,24 @@ def defBranches(tree,samplenm):
     tree.Branch ("susyMLSP__"   +samplenm,susyMLSP , "susyMLSP/F");
     tree.Branch ("susyMstop_"   +samplenm,susyMstop, "susyMstop/F");
     
+    tree.Branch ("nPhoton_" +samplenm,nPhoton , "nPhoton/I");
+    tree.Branch ("visHTv3_" +samplenm,visHTv3 , "visHTv3/D");
+
+    tree.Branch ("lep1_pt_"+samplenm,lep1_pt, "lep1_pt/D");
+    tree.Branch ("lep2_pt_"+samplenm,lep2_pt, "lep2_pt/D");
+    tree.Branch ("jet1_pt_"+samplenm,jet1_pt, "jet1_pt/D");
+    tree.Branch ("jet2_pt_"+samplenm,jet2_pt, "jet_pt/D");
+
+    tree.Branch ("dphill_"+samplenm,dphill , "dphill/D");
+    tree.Branch ("detall_"+samplenm,detall, "detall/D");
+    tree.Branch ("dRll_"  +samplenm,dRll  , "dRll/D");
+
+    tree.Branch ("dphijj_"+samplenm,dphijj , "dphijj/D");
+    tree.Branch ("detajj_"+samplenm,detajj, "detajj/D");
+    tree.Branch ("dRjj_" +samplenm,dRjj  , "dRjj/D");
+    
     
     return evid, maxSV, nSV, Dnjetstot,isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
         PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,\
-        SV_x,SV_y,SV_z,SV_chi2,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP
+        SV_x,SV_y,SV_z,SV_chi2,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,\
+        lep1_pt,lep2_pt,jet1_pt,jet2_pt,dphill,detall,dRll,dphijj,detajj,dRjj

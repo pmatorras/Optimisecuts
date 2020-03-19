@@ -15,10 +15,10 @@ c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,\
 doLogy=False
 
 variables=["evid_",  "nSV_","Dnjetstot_", "isSF_", \
-           "btagW_", " bvetoW_","MET_sumEt_","MET_pt_", \
+           "btagW_", "bvetoW_","MET_sumEt_","MET_pt_", \
            "PV_x_", "PV_y_", "PV_z_", "PV_npvs_", "PV_chi2_",\
            "SV_eta_", "SV_phi_", "SV_pt_", "SV_mass_", \
-           "SV_x_", "SV_y_", "SV_z_", "SV_chi2_"," mll_", \
+           "SV_x_", "SV_y_", "SV_z_", "SV_chi2_","mll_", \
            "mt2ll_", "nLepton_", "ptmiss_", "susyMstop_", "susyMLSP__"]
   
 flavours={'df':'-1','sf':'1'}
