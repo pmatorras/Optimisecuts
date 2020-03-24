@@ -93,7 +93,7 @@ def loopentries(sample,tree, samplenm, idxmax):
         
     print "#############################\n"
     del nSV, SV_eta,SV_pt, SV_mass,SV_x,SV_y, SV_z, SV_chi2
-    #print nSV
+    print tree
     hfile.cd()
     tree.Write()
     return 
@@ -106,45 +106,73 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage)
 
     parser.add_option('--nttbar' , dest='nttbar' , help='# ttbar entries', default=1000000)
-    parser.add_option('--nT2tt' , dest='nT2tt' , help='# ttbar\
-    entries', default=100000)
+    parser.add_option('--nWW' , dest='nWW' , help='# ww entries', default=1000000)
+    parser.add_option('--nT2tt' , dest='nT2tt' , help='# T2tt entries', default=100000)
+
     parser.add_option('--signal' , dest='signal' , help='signal file', default=inputFilesignal)
-    parser.add_option('--bkg' , dest='bkg' , help='background file', default=inputFilebkg)
+    parser.add_option('--ttbar' , dest='ttbar' , help='background file', default=inputFilettbar)
+    parser.add_option('--WW' , dest='WW' , help='background file', default=inputFileWW)
+    
     parser.add_option('--output' , dest='output' , help='name of output rootfile', default=hfilenm)
-    parser.add_option('--onlyone' , dest='onlyone' , help='if only one sample wants to be looked', default='no')
+    parser.add_option('--only' , dest='only' , help='if only one sample wants to be looked', default='no')
+    parser.add_option('--except' , dest='ignore' , help='not run one of the samples', default='no')
+    
     parser.add_option('--test' , dest='test' , help='run test on subset', default=False, action='store_true')
     (opt, args) = parser.parse_args()
 
-    folder='../rootfiles/'
-    nttbar=int(opt.nttbar)
-    nT2tt=int(opt.nT2tt)
+    folder = '../rootfiles/'
+    nttbar = int(opt.nttbar)
+    nT2tt  = int(opt.nT2tt)
+    nWW    = int(opt.nWW)
     if(opt.test):
         nttbar=10000
         nT2tt=1000
+        nWW=10000
     if('/' in opt.signal): inputFileT2tt=opt.signal
     else:
         inputFileT2tt=folder+opt.signal
-    if('/' in opt.bkg): inputFilettbar=opt.bkg
-    else: inputFilettbar=folder+opt.bkg
+    if('/' in opt.ttbar): inputFilettbar=opt.ttbar
+    else: inputFilettbar=folder+opt.ttbar
+    if('/' in opt.WW): inputFileWW=opt.WW
+    else: inputFileWW=folder+opt.WW
+    
     if('/' in opt.output): hfilenm=opt.output
     else: hfilenm='../Output/'+opt.output
 
     print "signal from", inputFileT2tt
     hfile = ROOT.TFile(hfilenm,"RECREATE","Example");
     
-    signal_t = ROOT.TTree("T2tt","A ROOT tree");
-    ttbar_t   = ROOT.TTree("ttbar","A ROOT tree");
+    signal_t = ROOT.TTree("T2tt","tree with signal");
+    ttbar_t  = ROOT.TTree("ttbar","tree with ttbar bkg");
+    WW_t     = ROOT.TTree("WW","tree with WW bkg")
 
-
-    ttbar_f = ROOT.TFile.Open(inputFilettbar ,"READ")
-    ttbar_evs= ttbar_f.Get('Events')
+    ttbar_f  = ROOT.TFile.Open(inputFilettbar ,"READ")
+    WW_f     = ROOT.TFile.Open(inputFileWW ,"READ")
     signal_f = ROOT.TFile.Open(inputFileT2tt ,"READ")
-    signal_evs= signal_f.Get('Events')
+    
+    WW_evs     = WW_f.Get('Events')
+    ttbar_evs  = ttbar_f.Get('Events')
+    signal_evs = signal_f.Get('Events')
 
-    if(opt.onlyone in ['ttbar','bkg']): loopentries(ttbar_evs,ttbar_t, "ttbar",nttbar)
-    elif(opt.onlyone in ['signal', 'T2tt']):loopentries(signal_evs, signal_t, "T2tt", nT2tt)
-    else:
-        loopentries(ttbar_evs,ttbar_t, "ttbar",nttbar)
-        loopentries(signal_evs, signal_t, "T2tt", nT2tt)
+    samples= {'ttbar': [inputFilettbar,ttbar_t, nttbar],
+              'WW'   : [inputFileWW, WW_t, nWW],
+              'T2tt':[inputFileT2tt, signal_t,nT2tt]}
+    #print inputFilettbar
+    rmsamples=opt.ignore.split('_')
+    dosamples=opt.only.split('_')
+    print dosamples, rmsamples
+    for sample in samples:
+        if sample in rmsamples:
+            print "Sample", sample, "in --except option"
+            continue
+        if sample not in dosamples and "no" not in dosamples[0]:
+            print "Sample", sample, "\tnot in --only option"
+            continue
+        print samples[sample][0] 
+        tree   = samples[sample][1]
+        tfile  = ROOT.TFile.Open(samples[sample][0],"READ")
+        events = tfile.Get('Events')
+        loopentries(events,tree, sample, samples[sample][2])
     
     print "Writing tree in", hfilenm
+    

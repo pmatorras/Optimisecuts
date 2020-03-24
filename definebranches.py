@@ -1,8 +1,10 @@
 from array import array
 import ROOT
 hfilenm="output/postcuts.root"
-inputFilebkg  = '../rootfiles/nanoLatino_TTTo2L2Nu__part10.root'
+inputFilettbar  = '../rootfiles/nanoLatino_TTTo2L2Nu__part10.root'
+inputFileWW     = '../rootfiles/nanoLatino_WWTo2L2Nu__part0.root'
 inputFilesignal = '../rootfiles/nanoLatino_T2tt__mStop-400to1200__part1.root'
+
 #nttbar=10000
 #nT2tt =1000
 def defBranches(tree,samplenm):
@@ -85,7 +87,7 @@ def defBranches(tree,samplenm):
     tree.Branch ("nLepton_"   +samplenm,nLepton, "nLepton/I");
     tree.Branch ("ptmiss_"    +samplenm,ptmiss , "ptmiss/D");
 
-    tree.Branch ("susyMLSP__"   +samplenm,susyMLSP , "susyMLSP/F");
+    tree.Branch ("susyMLSP_"   +samplenm,susyMLSP , "susyMLSP/F");
     tree.Branch ("susyMstop_"   +samplenm,susyMstop, "susyMstop/F");
     
     tree.Branch ("nPhoton_" +samplenm,nPhoton , "nPhoton/I");

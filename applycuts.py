@@ -1,13 +1,14 @@
 #Apply default cuts
+bkgs=['ttbar', 'WW']
 def defaultcuts(entry,samplenm):
-    if(samplenm in 'ttbar'):
+    if(samplenm in bkgs):
         pttag=bool(entry.CleanJet_pt[0]!=entry.leadingPtTagged_btagDeepBM_1c)
         
     else:
         pttag=bool(entry.CleanJet_pt[0]!=entry.leadingPtTagged)
     
     passedcut=False
-    metcut=bool(entry.MET_pt >300)
+    metcut=bool(entry.ptmiss >300)
     lepidcut=bool((entry.Lepton_isTightElectron_cutBasedMediumPOG[0] + entry.Lepton_isTightMuon_mediumRelIsoTight[0]+entry.Lepton_isTightElectron_cutBasedMediumPOG[1]+entry.Lepton_isTightMuon_mediumRelIsoTight[1])==2)
     occut=bool(entry.mll>20 and entry.Lepton_pt[0]>25 and entry.Lepton_pt[1]>20  and entry.Lepton_pdgId[0]*entry.Lepton_pdgId[1]<0)
     isrcut=bool(entry.CleanJet_pt[0]>150. and pttag and np.arccos(np.cos(entry.MET_phi-entry.CleanJet_phi[0]))>2.5)#REMEMBER TO CHANGE THIS
@@ -25,7 +26,7 @@ def flavour_tag(entry, samplenm):
     sameflavour=-999
     massZ = 91.1876
     vetoZ = abs(entry.mll-massZ)<15.
-    if('ttbar' in samplenm):
+    if(samplenm in bkgs):
         btagW = entry.btagWeight_1tag_btagDeepBM_1c
     else:
         btagW = entry.btagWeight_1tag
