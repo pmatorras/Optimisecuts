@@ -1,5 +1,6 @@
 from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend
 from ROOT import gROOT,gDirectory, TTree
+from collections import OrderedDict
 import os, optparse
 
 optim="/home/pablinux/cernbox/www/susy/optimisation"
@@ -14,13 +15,14 @@ def setRanges(hT2tt,httbar):
     xMax= 999
     yMax= 999
     yMin= 0
+    #    histo=
     yMax=1.1*max(hT2tt.GetMaximum(),httbar.GetMaximum())
     xMin=min(hT2tt.GetXaxis().GetXmin(),httbar.GetXaxis().GetXmin())
     xMax= max(hT2tt.GetXaxis().GetXmax(),httbar.GetXaxis().GetXmax())
     yMin=0.9*min(hT2tt.GetMinimum(),httbar.GetMinimum())
-    hT2tt.GetYaxis().SetRangeUser(yMin,yMax)
-    hT2tt.GetXaxis().SetRangeUser(xMin,xMax)
-    print xMax, xMin, "-----------------------------"
+    hT2tt.GetYaxis().SetRangeUser(yMin,0.4)#yMax)
+    #hT2tt.GetXaxis().SetRangeUser(xMin,xMax)
+    #print xMax, xMin, "-----------------------------"
 #Scale histograms
 def ScaleToMax(histos,varControl):
     for histo in histos:
@@ -28,16 +30,38 @@ def ScaleToMax(histos,varControl):
         norm=1
         maxBin=histo.GetMaximumBin()
         norm=histo.GetBinContent(maxBin)
-        #if maxE>norm: norm=maxE
-        #print "SCALING:\n",histo.GetName(), norm
         histo.Scale(1/norm)
 
 #Scale histograms
-def Scalehisto(histo,varControl):
-    norm=histo.GetSumOfWeights()
-    if(norm<0.0001): norm=1.0
-    if varControl is False: histo.Scale(1/norm)
-
+def OLDScaleToInt(histos,varControl):
+    for histo in histos:
+        norm=histo.GetSumOfWeights()
+        if(norm<0.0001): norm=1.0
+        if varControl is False: histo.Scale(1/norm)
+        if norm<10: histo.Scale(0.1)
+        print "SCALING:\n",histo.GetName(), norm, histo.GetEntries()
+#Scale histograms
+def ScaleToInt(histos,varControl):
+    for sample in histos:
+        histo=gDirectory.Get(histos[sample])
+        #histo=histos[sample]
+        #print sample, histo
+        norm=histo.GetSumOfWeights()
+        if(norm<0.0001): norm=1.0
+        if varControl is False: histo.Scale(1/norm)
+        if norm<10: histo.Scale(0.1)
+        
+#check if histogram exists
+def OLDhistoexists(histo, hnm):
+    cont=False
+    histo_type=str(type(histo)) #'ROOT.TH1F'>"
+    if (bool('ROOT.TH1F' not in histo_type)):
+        print "-----------------------------------"
+        print "|  "+hnm+" not a histogram\t  |"
+        print "| perhaps variable doesn't exist? |"
+        print "-----------------------------------"
+        cont=True
+    return cont
 #check if histogram exists
 def histoexists(histo, hnm):
     cont=False
@@ -49,6 +73,37 @@ def histoexists(histo, hnm):
         print "-----------------------------------"
         cont=True
     return cont
+
+#Scale x axis
+def findXrange(hdict, binWOri,nBinFin,xMinOri):
+    xMinBin=999999
+    xMaxBin=0
+    for samp in hdict:
+        histo=gDirectory.Get(hdict[samp])
+        xMinBin=min(xMinBin,histo.FindFirstBinAbove(0.1))
+        xMaxBin=max(xMaxBin,histo.FindLastBinAbove(0.1))
+    if(xMinBin>xMaxBin):
+        xMinBin=0
+        xMaxBin=nBinFin
+    nBin=xMaxBin-xMinBin
+    xLen=nBin*binWOri
+    widthNew=xLen/nBinFin
+    scaleFactor=int(widthNew/binWOri)
+    while(scaleFactor>1 and nBinOri%scaleFactor>0): scaleFactor-=1
+    if(scaleFactor<1): scaleFactor=1
+    xMax=xMinOri+xMaxBin*binWOri
+    xMin=xMinOri+xMinBin*binWOri   
+    if(xMax>200): xMin=0
+    return xMin, xMax, scaleFactor
+#Scale y axis
+def findYrange(hdict, scaleFactor):
+    yMax=0
+    for samp in hdict:
+        histo=gDirectory.Get(hdict[samp])                
+        histo.Rebin(scaleFactor)
+        ymaxBin=histo.GetMaximumBin()
+        yMax=max(yMax,histo.GetBinContent(ymaxBin))
+    return yMax
             
 
 #Optional parameters
@@ -80,11 +135,12 @@ controlvars=["evid_","btagW_","bvetoW_", "susyMstop_","susyMLSP__","isSF_", "nLe
 flavours={'df':'-1','sf':'1'}
 bjets={'btag': 'btagW_','bveto':'bvetoW_'}
 samples={'T2tt':'hT2tt', 'ttbar':'httbar', 'WW': 'hWW'}
-mStops={'mS-400to700_dm-1to200' :'&& susyMstop>=400 && susyMstop<600 && susyMstop-susyMLSP<=200',\
-        'mS-400to700_dm-200to700' :'&& susyMstop>=400 && susyMstop<600 && susyMstop-susyMLSP>200',\
+mStops={'mS-400to700_dm-1to200' :['&& susyMstop>=400 && susyMstop<600 && susyMstop-susyMLSP<=200', 6],\
+        'mS-400to700_dm-200to700' :['&& susyMstop>=400 && susyMstop<600 && susyMstop-susyMLSP>200', 46],\
         }
         #'mS-700to1200':'&& susyMstop>=700 && susyMstop<=1200'       }
 
+bkgs={'ttbar': 4,'WW': 3}
 print "Creating histograms:"
 for var in variables:
     #Save in different folder if control variable
@@ -104,14 +160,17 @@ for var in variables:
         for fl in flavours:
             histnm = var+bjet+'_'+fl
             nBinOri= 1000000
-            nBinFin= 50
+            nBinFin= 40
             xMinOri=-5000.
             xMaxOri= 5000.
             lenOri= (xMaxOri-xMinOri)
             binWOri=lenOri/nBinOri
             xRanOri= "("+str(nBinOri)+","+str(xMinOri)+","+str(xMaxOri)+")"
+            dtest=OrderedDict({})
             for sample in samples:
                 #make histo for each variable and condition
+                fillvar   = '>-999'
+                if var in ['jet1_pt', 'jet2_pt', 'mt2ll']: fillvar='>0'
                 tree      = hfile.Get(sample)
                 histo     = samples[sample]+histnm
                 treevar   = var+sample+">>"+histo+xRanOri
@@ -120,73 +179,50 @@ for var in variables:
                 bjetcond  = bjets[bjet]+sample
                 condition = bjetcond+'*('+flcond+'&&'+onlyfill+')'
                 tree.Draw(treevar, condition)
-
+                dtest[sample]=histo
                 #divide in different mass ranges
                 for mstop in mStops:
                     if sample not in 'T2tt': continue
                     splitcond    = condition.split(')')
-                    mStopcond    = splitcond[0]+mStops[mstop]+')'
+                    mStopcond    = splitcond[0]+mStops[mstop][0]+')'
                     treemStop = var+sample+'>>'+histo+'_'+mstop+xRanOri
-                    tree.Draw(treemStop,mStopcond)                
-            histosig= samples['T2tt']+histnm
-            print "HISTOGRAM:\t", histnm
-
-            #Get  histograms and check its existance
-            hT2tt      = gDirectory.Get(samples["T2tt"]+histnm)
-            httbar     = gDirectory.Get(samples["ttbar"]+histnm)
-            hWW        = gDirectory.Get(samples["WW"]+histnm)
-            cont_T2tt  = histoexists(hT2tt,"hT2tt")
-            cont_ttbar = histoexists(httbar,"httbar")
-            cont_WW    = histoexists(hWW,"WW")
-
-            if(True in [cont_T2tt,cont_ttbar,cont_WW]): continue
+                    tree.Draw(treemStop,mStopcond)
+                    dtest[sample+'_'+mstop]=histo+'_'+mstop
             
-            #Set proper ranges
-            
-            #Draw histogram and legend
-            hT2tt.SetTitle(histnm)
-            hT2tt.SetStats(False)
-            hT2tt.SetLineColor(2)
-            hWW.SetLineColor(3)
-            xBinMin=hT2tt.FindFirstBinAbove(0.0001)
-            xBinMax=hT2tt.FindLastBinAbove(0.0001)
-            nBin=xBinMax-xBinMin
-            xLen=nBin*binWOri
-            widthNew=xLen/nBinFin
-            scaleFactor=int(widthNew/binWOri)
-            while(nBinOri%scaleFactor>0): scaleFactor-=1
-            hT2tt.Rebin(scaleFactor)
-            httbar.Rebin(scaleFactor)
-            hWW.Rebin(scaleFactor)
-            xMax=xMinOri+xBinMax*binWOri
-            xMin=xMinOri+xBinMin*binWOri
-            if(xMin>0): xMin=0
-            hT2tt.GetXaxis().SetRangeUser(xMin,xMax)
-            Scalehisto(httbar,isControl)
-            Scalehisto(hT2tt,isControl)
-            Scalehisto(hWW,isControl)
-            ScaleToMax([hT2tt,httbar,hWW], isControl)
-            #setRanges(hT2tt,httbar)
-            
-            hT2tt.Draw('hist')
-            httbar.Draw("hist same")
-            hWW.Draw("hist same")
+            #Set proper ranges and rebin histogram
+            xMin, xMax, scaleFactor= findXrange(dtest, binWOri, nBinFin, xMinOri)
+            ScaleToInt(dtest, isControl)
+            yMax=findYrange(dtest, scaleFactor)
             legend = TLegend(0.7,0.7,0.9,0.9);
-            legend.AddEntry(hT2tt,"T2tt","f");
-            legend.AddEntry(httbar,"ttbar","f");
-            legend.AddEntry(hWW,'WW','f')
-            #draw masspoint ranges
-            for idx,mstop in enumerate(mStops):
-                hmStop = gDirectory.Get(histosig+'_'+mstop)
-                normmStop  = hmStop.GetSumOfWeights();
-                hmStop.SetLineColor(idx+6)
-                hmStop.Rebin(scaleFactor)
-                ScaleToMax([hmStop],isControl)
-                #hmStop.Draw('same')
-                legend.AddEntry(hmStop,"T2tt-"+mstop,"f");
-                
-            legend.Draw()
 
+            
+            for idx,sam in enumerate(dtest):
+                isSame='same'
+                hist=gDirectory.Get(dtest[sam])
+                if idx is 0:
+                    hist.GetXaxis().SetRangeUser(xMin,xMax)
+                    hist.GetYaxis().SetRangeUser(0,1.1*yMax)
+                    hist.SetTitle(histnm)
+                    hist.SetStats(False)
+
+                    isSame=''
+                    hist.Draw('hist')
+                if sam in "T2tt":
+                    hist.Draw('hist same')
+                    hist.SetLineColor(2)
+                    #print "histo", hist, xMin, xMax
+                for ms in mStops:
+                    if ms in sam :
+                        #print "colors", type( hist), hist.GetName()
+                        hist.SetLineColor(mStops[ms][1])
+                        hist.Draw('same')
+                isBkg=''
+                if sam in bkgs:
+                    isBkg='hist '
+                    hist.SetLineColor(bkgs[sam])
+                hist.Draw(isBkg+'same')
+                legend.AddEntry(hist,sam,"f");
+            legend.Draw()
             #save to image
             outputfolder=hfolder+bjet+'/'+cfolder
             os.system('mkdir -p '+outputfolder)
