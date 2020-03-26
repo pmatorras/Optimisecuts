@@ -13,10 +13,10 @@ def defaultcuts(entry,samplenm):
     occut=bool(entry.mll>20 and entry.Lepton_pt[0]>25 and entry.Lepton_pt[1]>20  and entry.Lepton_pdgId[0]*entry.Lepton_pdgId[1]<0)
     isrcut=bool(entry.CleanJet_pt[0]>150. and pttag and np.arccos(np.cos(entry.MET_phi-entry.CleanJet_phi[0]))>2.5)#REMEMBER TO CHANGE THIS
     ncleanjets=bool(entry.nCleanJet>1)
-    conds=[metcut,lepidcut,occut,isrcut,ncleanjets]
+    conds=[metcut,lepidcut,occut,ncleanjets]#isrcut 
     if all(conds) is True :
         passedcut=True
-    return passedcut
+    return passedcut, isrcut
 
 
 #Function to cut separately                                                                                 

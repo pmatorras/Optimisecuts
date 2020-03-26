@@ -10,9 +10,9 @@ exec(open("applycuts.py").read())
 def loopentries(sample,tree, samplenm, idxmax):
     counter=0
     print "looping over", samplenm, "\nfor",idxmax, "events"
-    evid, maxSV, nSV, Dnjetstot,isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
+    evid, maxSV, nSV,nbjets, nbCleanjets, Dnjetstot, Dnbjetstot,isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
     PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,\
-    SV_x,SV_y,SV_z,SV_chi2, mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,\
+    SV_x,SV_y,SV_z,SV_chi2, mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,ISRcut,\
     lep1_pt,lep2_pt,jet1_pt,jet2_pt,dphill,detall,dRll,dphijj,detajj,dRjj= defBranches(tree, samplenm)
     for idx, entry in enumerate(sample):
         if(idx>idxmax):
@@ -26,14 +26,28 @@ def loopentries(sample,tree, samplenm, idxmax):
         df = False
         btag  = False
         bveto = False
-        passedcut=defaultcuts(entry,samplenm) 
+        passedcut,isrcut=defaultcuts(entry,samplenm)
         if passedcut is False:
             continue
-    
+        ISRcut[0]=int(isrcut)
+        
         CleanJet_pt = entry.CleanJet_pt
         ncleanJet   = entry.nCleanJet
-        Dnjets=entry.nJet-ncleanJet
-        Dnjetstot[0]= Dnjets
+
+        def nBjets(pt, eta, btag, njets):
+            nbjets = 0
+            samelen= bool(len(pt)== len(btag))
+            for i in range(0,njets):
+                ibtag=i
+                if samelen is False : ibtag=entry.CleanJet_jetIdx[i]
+                if(pt[i]>20 and abs(eta[i])<2.4 and btag[ibtag]>=0.6321):
+                    nbjets+=1
+            return nbjets
+
+        nbCleanjets[0] = nBjets(entry.CleanJet_pt, entry.CleanJet_eta,entry.Jet_btagDeepB, ncleanJet)
+        nbjets[0]      = nBjets(entry.Jet_pt, entry.Jet_eta, entry.Jet_btagDeepB, entry.nJet)
+        Dnbjetstot[0]  = nbjets[0]-nbCleanjets[0]
+        Dnjetstot[0]   = entry.nJet-ncleanJet
         #Bveto
         btagW[0]=-1
         bvetoW[0]=-1

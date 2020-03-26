@@ -124,19 +124,21 @@ c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,\
 
 #Define variables to over which make histograms
 variables=["evid_",  "nSV_","Dnjetstot_", "isSF_", \
+           "nbCleanjets_","nbjets_","Dnbjetstot_","ISRcut_",\
            "btagW_", "bvetoW_","MET_sumEt_","MET_pt_", \
            "PV_x_", "PV_y_", "PV_z_", "PV_npvs_", "PV_chi2_",\
            "SV_eta_", "SV_phi_", "SV_pt_", "SV_mass_", \
            "SV_x_", "SV_y_", "SV_z_", "SV_chi2_","mll_", \
-           "mt2ll_", "nLepton_", "ptmiss_", "susyMstop_","susyMLSP__",\
+           "mt2ll_", "nLepton_", "ptmiss_", "susyMstop_","susyMLSP_",\
            "lep1_pt_","lep2_pt_","jet1_pt_","jet2_pt_","dphill_",\
            "detall_","dRll_","dphijj_","detajj_","dRjj_"]
-controlvars=["evid_","btagW_","bvetoW_", "susyMstop_","susyMLSP__","isSF_", "nLepton_"]
+controlvars=["evid_","btagW_","bvetoW_", "susyMstop_","susyMLSP_","isSF_", "nLepton_"]
 flavours={'df':'-1','sf':'1'}
 bjets={'btag': 'btagW_','bveto':'bvetoW_'}
 samples={'T2tt':'hT2tt', 'ttbar':'httbar', 'WW': 'hWW'}
-mStops={'mS-400to700_dm-1to200' :['&& susyMstop>=400 && susyMstop<600 && susyMstop-susyMLSP<=200', 6],\
-        'mS-400to700_dm-200to700' :['&& susyMstop>=400 && susyMstop<600 && susyMstop-susyMLSP>200', 46],\
+mStops={'mS-400to700_dm-1to125' :['&& susyMstop>=400 && susyMstop<700 && susyMstop-susyMLSP<=125', 6],\
+        'mS-400to700_dm-125to200' :['&& susyMstop>=400 && susyMstop<700 && susyMstop-susyMLSP>125 && susyMstop-susyMLSP<=200', 30],\
+        'mS-400to700_dm-200to700' :['&& susyMstop>=400 && susyMstop<700 && susyMstop-susyMLSP>200', 46],\
         }
         #'mS-700to1200':'&& susyMstop>=700 && susyMstop<=1200'       }
 
@@ -231,4 +233,4 @@ for var in variables:
 
 print "\nFinished drawing histograms.\nCopying to "+optim
 os.system("mkdir -p "+optim )
-os.system('cp -r '+hfolder+' '+optim)
+#os.system('cp -r '+hfolder+' '+optim)

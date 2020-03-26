@@ -11,7 +11,11 @@ def defBranches(tree,samplenm):
     evid = array('i',[-1])
     maxSV=20
     nSV  = array('i',[-1])
-    Dnjetstot = array('d',[-999])
+    Dnjetstot = array('i',[-999])
+    nbjets =array('i',[-999])
+    nbCleanjets=array('i',[-999])
+    Dnbjetstot =array('i',[-999])
+    
     isSF   = array('i',[-999])
     btagW  = array('d',[-999])
     bvetoW = array('d',[-999])
@@ -42,7 +46,8 @@ def defBranches(tree,samplenm):
 
     susyMstop = array('f',[-999])
     susyMLSP  = array('f',[-999])
-
+    ISRcut    = array('i',[-999])
+    
     nPhoton = array('i',[-999])
     visHTv3 = array('d',[-999])
     dphill  = array('d',[-999])
@@ -58,7 +63,11 @@ def defBranches(tree,samplenm):
     #Define tree branches
     tree.Branch ("evid_"     +samplenm,evid     , "evid/I");
     
-    tree.Branch ("Dnjetstot_"+samplenm,Dnjetstot, "Dnjetstot/D");
+    tree.Branch ("Dnjetstot_"+samplenm,Dnjetstot, "Dnjetstot/i");
+    tree.Branch ("nbjets_"+samplenm,nbjets, "nbjets/i");
+    tree.Branch ("nbCleanjets_"+samplenm,nbCleanjets, "nbCleanjets/i");
+    tree.Branch ("Dnbjetstot_"+samplenm,Dnbjetstot, "Dnbjetstot/i");
+    
     tree.Branch ("btagW_"    +samplenm,btagW    , "btagW/D");
     tree.Branch ("bvetoW_"   +samplenm,bvetoW   , "bvetoW/D");
     tree.Branch ("isSF_"     +samplenm,isSF     , "isSF/I");
@@ -89,6 +98,7 @@ def defBranches(tree,samplenm):
 
     tree.Branch ("susyMLSP_"   +samplenm,susyMLSP , "susyMLSP/F");
     tree.Branch ("susyMstop_"   +samplenm,susyMstop, "susyMstop/F");
+    tree.Branch ("ISRcut_"   +samplenm,ISRcut, "ISRcut/I");
     
     tree.Branch ("nPhoton_" +samplenm,nPhoton , "nPhoton/I");
     tree.Branch ("visHTv3_" +samplenm,visHTv3 , "visHTv3/D");
@@ -107,7 +117,7 @@ def defBranches(tree,samplenm):
     tree.Branch ("dRjj_" +samplenm,dRjj  , "dRjj/D");
     
     
-    return evid, maxSV, nSV, Dnjetstot,isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
+    return evid, maxSV, nSV,nbjets, nbCleanjets, Dnjetstot, Dnbjetstot, isSF,btagW, bvetoW,MET_sumEt,MET_pt,\
         PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,\
-        SV_x,SV_y,SV_z,SV_chi2,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,\
+        SV_x,SV_y,SV_z,SV_chi2,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,ISRcut,\
         lep1_pt,lep2_pt,jet1_pt,jet2_pt,dphill,detall,dRll,dphijj,detajj,dRjj
