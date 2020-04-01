@@ -33,24 +33,15 @@ def ScaleToMax(histos,varControl):
         histo.Scale(1/norm)
 
 #Scale histograms
-def OLDScaleToInt(histos,varControl):
-    for histo in histos:
-        norm=histo.GetSumOfWeights()
-        if(norm<0.0001): norm=1.0
-        if varControl is False: histo.Scale(1/norm)
-        if norm<10: histo.Scale(0.1)
-        print "SCALING:\n",histo.GetName(), norm, histo.GetEntries()
-#Scale histograms
 def ScaleToInt(histos,varControl):
     for sample in histos:
         histo=gDirectory.Get(histos[sample])
         #histo=histos[sample]
-        print sample
         norm=histo.GetSumOfWeights()
         if(norm<0.0001): norm=1.0
         if varControl is False: histo.Scale(1/norm)
         if norm<10: histo.Scale(0.1)
-        print "NORM", norm
+        #print "NORM", histo.GetName(), histo.GetEntries()
 #check if histogram exists
 def OLDhistoexists(histo, hnm):
     cont=False
@@ -93,7 +84,10 @@ def findXrange(hdict, binWOri,nBinFin,xMinOri):
     if(scaleFactor<1): scaleFactor=1
     xMax=xMinOri+xMaxBin*binWOri
     xMin=xMinOri+xMinBin*binWOri   
-    if(xMax>200): xMin=0
+    if(xMax>200 and xMin>0): xMin=0
+    if(xMin==xMax):
+        xMin=-0
+        xMax=2*xMax
     return xMin, xMax, scaleFactor
 #Scale y axis
 def findYrange(hdict, scaleFactor):
@@ -131,15 +125,20 @@ if opt.rmold is True:
 gROOT.SetBatch(not(opt.nobatch))
 
 #Define variables to over which make histograms
-allvars=["evid_", "isSF_", "btagW_", "bvetoW_", "nSV_", "nLepton_", "ISRcut_","nbCleanjets_","nbjets_" ,\
-         "mll_", "mt2ll_", "detall_","dRll_", "MET_sumEt_","MET_pt_", "ptmiss_","lep1_pt_","lep2_pt_" ,\
-         "jet1_pt_","jet2_pt_","dphill_", "dphijj_","detajj_","dRjj_","Dnjetstot_","Dnbjetstot_",\
-         "SV_x_", "SV_y_", "SV_z_", "SV_chi2_","SV_eta_", "SV_phi_", "SV_pt_", "SV_mass_",\
-         "PV_x_", "PV_y_", "PV_z_", "PV_chi2_","PV_npvs_","susyMstop_","susyMLSP_"]
-           
-controlvars = ["evid_","btagW_","bvetoW_", "susyMstop_","susyMLSP_","isSF_", "nLepton_"]
+allvars=["evid", "isSF", "btagW", "bvetoW", "nSV", "nLepton", "ISRcut","nbCleanjets","nbjets" ,\
+         "mll", "mt2ll", "detall","dRll", "MET_sumEt","MET_pt", "ptmiss","lep1_pt","lep2_pt" ,\
+         "jet1_pt","jet2_pt","dphill", "dphijj","detajj","dRjj","Dnjetstot","Dnbjetstot",\
+         "SV_x", "SV_y", "SV_z", "SV_chi2","SV_eta", "SV_phi", "SV_pt", "SV_mass",\
+         "PV_x", "PV_y", "PV_z", "PV_chi2","PV_npvs","susyMstop","susyMLSP","lep1_pt+lep2_pt",\
+         "njets", "nbjets", "nCleanjets", "nbCleanjets","dphill:(lep1_pt+lep2_pt)",\
+         "dphil1jmin","dphil1jmax","dphil1bmin","dphil1bmax",\
+         "dphil2jmin","dphil2jmax","dphil2bmin","dphil2bmax",\
+         "bjet1_pt","bjet1_eta", "bjet1_phi", "bjet2_pt", "bjet2_eta", "bjet2_phi"]
+
+
+controlvars = ["evid","btagW","bvetoW", "susyMstop","susyMLSP","isSF","ISRcut", "nLepton"]
 flavours= {'df':'-1','sf':'1'}
-bjets   = {'btag': 'btagW_','bveto':'bvetoW_'}
+bjets   = {'btag': 'btagW','bveto':'bvetoW'}
 samples = {'T2tt':'hT2tt', 'ttbar':'httbar', 'WW': 'hWW'}
 massrange='&& susyMstop>=400 && susyMstop<700 '
 deltamass=' && susyMstop-susyMLSP'
@@ -147,14 +146,12 @@ mStops = {'mS-400to700_dm-1to125'   :[massrange + deltamass +'<=125', 6],\
           'mS-400to700_dm-125to200' :[massrange + deltamass +'>125'+ deltamass +'<=200', 30],\
           'mS-400to700_dm-200to700' :[massrange + deltamass +'>200', 46],\
         }
-testvars=["njets_", "nbjets_", "nCleanjets_", "nbCleanjets_",\
-          "dphil1jmin_","dphil1jmax_","dphil1bmin_","dphil1bmax_",\
-          "dphil2jmin_","dphil2jmax_","dphil2bmin_","dphil2bmax_",\
-          "bjet1_pt_","bjet1_eta_", "bjet1_phi_", "bjet2_pt_", "bjet2_eta_", "bjet2_phi_"]
-
+testvars=["lep1_pt+lep2_pt"]
+ptsumcond={"smalldphi":"&& dphill<1.2","largedphi": "&& dphill>1.2", "":""}
 
 bkgs={'ttbar': 4,'WW': 3}
-ISRcut={"ISR": "&& ISRcut>0", "Inclusive":"", "lowMT2": " && mt2ll<20", "lowMT2_ISR": " && mt2ll<20 && ISRcut>0"}
+ISRcut={"ISR": "ISRcut>0", "Inclusive":"1==1", "lowMT2": "mt2ll<20", "lowMT2_ISR": " mt2ll<20 && ISRcut>0",\
+        "highMT2": "mt2ll>100", "highMT2_ISR": " mt2ll>100 && ISRcut>0"}
 print "Creating histograms:"
 c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1600, 900 )
 if  opt.test is True:
@@ -167,8 +164,7 @@ for var in variables:
     isControl=bool(var in controlvars)        
     if(isControl is True): cfolder='Control/'
 
-    if opt.var not in var: continue
-    print "var", var
+    if opt.var is not False and opt.var not in var: continue
     btagVeto=False
     if(var in bjets.values()): btagVeto=True 
     for bjet in bjets:
@@ -188,14 +184,41 @@ for var in variables:
             if isrnm in "Inclusive": isrnm="All"
             os.system('mkdir -p '+samplefolder)
             for fl in flavours:
-                histnm = var+bjet+'_'+fl+'_'+isrnm
+                varsplit=var.split(':')
+                varnm=''
+                lepsum='lep1_pt+lep2_pt'
+                islepsum=bool(lepsum in var)
+                ptcond1="smalldphi"#"smalldphi"
+                for idx,v in enumerate(varsplit):
+                    if idx==0:
+                        if(lepsum in v): v="lep_ptsum"
+                        varnm+=v+ptcond1
+                    else:
+                        if(lepsum in v): v="lep_ptsum"
+                        varnm+="VS"+v+ptcond1
+
+                histnm = varnm+'_'+bjet+'_'+fl+'_'+isrnm
                 nBinOri= 1000000
                 nBinFin= 10#40
                 xMinOri=-5000.
                 xMaxOri= 5000.
                 lenOri= (xMaxOri-xMinOri)
                 binWOri=lenOri/nBinOri
-                xRanOri= "("+str(nBinOri)+","+str(xMinOri)+","+str(xMaxOri)+")"
+                xRanOri=""
+                if "SV_chi2" in var:
+                    xMinOri=-20
+                    xMaxOri= 20
+                if var in "PV_y":
+                    xMinOri= 0.15
+                    xMaxOri= 0.20
+                if var in "PV_x":
+                    xMinOri= 0.09
+                    xMaxOri= 0.12
+                is2D=bool(len(var.split(':'))>1)
+                if(is2D is False):
+                    xRanOri= "("+str(nBinOri)+","+str(xMinOri)+","+str(xMaxOri)+")"
+                elif is2D is True and islepsum is True:
+                    xRanOri= "(30,40,300,30,0,3.15)"
                 dtest=OrderedDict({})
                 for sample in samples:
                     #make histo for each variable and condition
@@ -203,66 +226,89 @@ for var in variables:
                     if var in ['jet1_pt', 'jet2_pt', 'mt2ll']: fillvar='>0'
                     tree      = hfile.Get(sample)
                     histo     = samples[sample]+histnm
-                    treevar   = var+sample+">>"+histo+xRanOri
-                    flcond    = "isSF_"+sample+"=="+flavours[fl]
-                    isrcond   = ISRcut[isr]
+                    
+                    onlyfill = ' && '
                     number ='-999'
-                    if "dphi" in var: number='-1'
-                    onlyfill  = var+sample+">"+number
-                    bjetcond  = bjets[bjet]+sample
-                    condition = bjetcond+'*('+flcond+'&&'+onlyfill+isrcond+')'
+                    if is2D is False:
+                        if "dphi" in var: number='-1'
+                        onlyfill += var+">"+number+ " && "
+                    elif is2D is True:
+                        for v in var.split(':'):
+                            n='-999'
+                            if "dphi" in v: n='-1'
+                            onlyfill+=v+">"+n+" && "        
+
+                    treevar   = var+">>"+histo+xRanOri
+                    flcond    = "isSF=="+flavours[fl]
+                    isrcond   = ISRcut[isr]
+                    
+                    bjetcond  = bjets[bjet]
+                    condition = bjetcond+'*('+flcond+onlyfill+isrcond+ptsumcond[ptcond1]+')'
                     tree.Draw(treevar, condition)
                     dtest[sample]=histo
                     #divide in different mass ranges
                     for mstop in mStops:
                         if sample not in 'T2tt': continue
-                        splitcond    = condition.split(')')
-                        mStopcond    = splitcond[0]+mStops[mstop][0]+')'
-                        treemStop = var+sample+'>>'+histo+'_'+mstop+xRanOri
+                        splitcond    = condition[:-1]
+                        mStopcond    = splitcond+mStops[mstop][0]+')'
+                        treemStop = var+'>>'+histo+'_'+mstop+xRanOri
                         tree.Draw(treemStop,mStopcond)
                         dtest[sample+'_'+mstop]=histo+'_'+mstop
             
                 #Set proper ranges and rebin histogram
-                xMin, xMax, scaleFactor= findXrange(dtest, binWOri, nBinFin, xMinOri)
-                ScaleToInt(dtest, isControl)
-                print "scaleFactor", scaleFactor
-                yMax=findYrange(dtest, scaleFactor)
-                legend = TLegend(0.7,0.7,0.9,0.9);
+                if(is2D is False):
+                    xMin, xMax, scaleFactor= findXrange(dtest, binWOri, nBinFin, xMinOri)
+                    ScaleToInt(dtest, isControl)
+                    yMax=findYrange(dtest, scaleFactor)
+                    legend = TLegend(0.7,0.7,0.9,0.9);
+                    for idx,sam in enumerate(dtest):
+                        isSame='same'
+                        #print "dtest", dtest
+                        hist=gDirectory.Get(dtest[sam])
+                        if idx is 0:
+                            hist.GetXaxis().SetRangeUser(xMin,xMax)
+                            hist.GetYaxis().SetRangeUser(0,1.1*yMax)
+                            hist.SetTitle(histnm)
+                            hist.SetStats(False)
 
-            
-                for idx,sam in enumerate(dtest):
-                    isSame='same'
-                    hist=gDirectory.Get(dtest[sam])
-                    if idx is 0:
-                        hist.GetXaxis().SetRangeUser(xMin,xMax)
-                        hist.GetYaxis().SetRangeUser(0,1.1*yMax)
-                        hist.SetTitle(histnm)
+                            isSame=''
+                            hist.Draw('hist')
+                        if sam in "T2tt":
+                            hist.Draw('hist same')
+                            hist.SetLineColor(2)
+                            #print "histo", hist, xMin, xMax
+                        for ms in mStops:
+                            if ms in sam :
+                                #print "colors", type( hist), hist.GetName()
+                                hist.SetLineColor(mStops[ms][1])
+                                hist.Draw('same')
+                        isBkg=''
+                        if sam in bkgs:
+                            isBkg='hist '
+                            hist.SetLineColor(bkgs[sam])
+                        hist.Draw(isBkg+'same')
+                        legend.AddEntry(hist,sam,"f");
+                    legend.Draw()
+                    #save to image
+                    outputfolder=samplefolder+'/'+cfolder
+                    os.system('mkdir -p '+outputfolder)
+                    os.system("cp "+optim+'/index.php '+outputfolder)
+                    c1.SaveAs(outputfolder+histnm+'.png')
+                elif is2D is True:
+                    outputfolder=samplefolder+'/'+varnm+'/'+cfolder
+                    os.system('mkdir -p '+outputfolder)
+                    os.system("cp "+optim+'/index.php '+outputfolder)
+                    
+                    for sam in dtest:
+                        hist=gDirectory.Get(dtest[sam])
                         hist.SetStats(False)
-
-                        isSame=''
-                        hist.Draw('hist')
-                    if sam in "T2tt":
-                        hist.Draw('hist same')
-                        hist.SetLineColor(2)
-                        #print "histo", hist, xMin, xMax
-                    for ms in mStops:
-                        if ms in sam :
-                            #print "colors", type( hist), hist.GetName()
-                            hist.SetLineColor(mStops[ms][1])
-                            hist.Draw('same')
-                    isBkg=''
-                    if sam in bkgs:
-                        isBkg='hist '
-                        hist.SetLineColor(bkgs[sam])
-                    hist.Draw(isBkg+'same')
-                    legend.AddEntry(hist,sam,"f");
-                legend.Draw()
-                #save to image
-                outputfolder=samplefolder+'/'+cfolder
-                os.system('mkdir -p '+outputfolder)
-                os.system("cp "+optim+'/index.php '+outputfolder)
-                c1.SaveAs(outputfolder+histnm+'.png')
-
+                        hist.SetTitle(histnm+'_'+sam)
+                        #xMax=hist.FindLastBinAbove(1)
+                        #hist.GetXaxis().SetRangeUser(0,xMax)
+                        hist.Draw('colz')
+                        c1.SaveAs(outputfolder+histnm+sam+'.png')
+               
+                
 print "\nFinished drawing histograms.\nCopying to "+optim
 os.system("mkdir -p "+optim )
 #os.system('cp -r '+hfolder+' '+optim)
