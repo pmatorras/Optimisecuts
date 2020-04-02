@@ -1,5 +1,5 @@
 #Apply default cuts
-bkgs=['ttbar', 'WW']
+bkgs=['ttbar', 'WW', 'ZZ', 'ttZ']
 def defaultcuts(entry,samplenm):
     if(samplenm in bkgs):
         pttag=bool(entry.CleanJet_pt[0]!=entry.leadingPtTagged_btagDeepBM_1c)

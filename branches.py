@@ -1,9 +1,13 @@
 from array import array
 import ROOT
-hfilenm="output/postcuts.root"
-inputFilettbar  = '../rootfiles/nanoLatino_TTTo2L2Nu__part10.root'
-inputFileWW     = '../rootfiles/nanoLatino_WWTo2L2Nu__part0.root'
-inputFilesignal = '../rootfiles/nanoLatino_T2tt__mStop-400to1200__part1.root'
+cutfolder = "./Test/"
+cutfilenm = cutfolder+"postcuts.root"
+inputFilettbar = '/eos/cms/store/user/scodella/SUSY/Nano/Summer16_102X_nAODv6_Full2016v6/MCSusy2016v6__MCCorr2016Susyv6__susyMT2/nanoLatino_TTTo2L2Nu__part10.root' 
+inputFileWW    = '/eos/cms/store/user/scodella/SUSY/Nano/Summer16_102X_nAODv6_Full2016v6/MCSusy2016v6__MCCorr2016Susyv6__susyMT2/nanoLatino_WWTo2L2Nu__part1.root'
+inputFileZZ    = '/eos/cms/store/user/scodella/SUSY/Nano/Summer16_102X_nAODv6_Full2016v6/MCSusy2016v6__MCCorr2016Susyv6__susyMT2/nanoLatino_ZZTo2L2Nu_ext1__part0.root'
+inputFilettZ   = '/eos/cms/store/user/scodella/SUSY/Nano/Summer16_102X_nAODv6_Full2016v6/MCSusy2016v6__MCCorr2016Susyv6__susyMT2/nanoLatino_TTZToLLNuNu_M-10_ext3__part0.root'
+
+inputFileT2tt  = '/eos/user/s/scodella/SUSY/Nano/Summer16FS_102X_nAODv4_Full2016v4/susyGen__susyW__MCSusy2016FS__MCCorr2016SusyFS__susyMT2FS/nanoLatino_T2tt__mStop-400to1200__part1.root'
 
 #nttbar=10000
 #nT2tt =1000

@@ -178,29 +178,45 @@ if __name__ == '__main__':
     usage = 'usage: %prog [options]'
     parser = optparse.OptionParser(usage)
 
-    parser.add_option('--nttbar' , dest='nttbar' , help='# ttbar entries', default=1000000)
-    parser.add_option('--nWW' , dest='nWW' , help='# ww entries', default=1000000)
-    parser.add_option('--nT2tt' , dest='nT2tt' , help='# T2tt entries', default=100000)
+    parser.add_option('--nT2tt' , dest='nT2tt' , help='# T2tt entries' , default=100000)
+    parser.add_option('--nttbar', dest='nttbar', help='# ttbar entries', default=1000000)
+    parser.add_option('--nWW' , dest='nWW' , help='# ww entries' , default=1000000)
+    parser.add_option('--nttZ', dest='nttZ', help='# ttZ entries', default=1000000)
+    parser.add_option('--nZZ' , dest='nZZ' , help='# ZZ entries' , default=1000000)
 
-    parser.add_option('--signal' , dest='signal' , help='signal file', default=inputFilesignal)
-    parser.add_option('--ttbar' , dest='ttbar' , help='background file', default=inputFilettbar)
-    parser.add_option('--WW' , dest='WW' , help='background file', default=inputFileWW)
+    parser.add_option('--signal', dest='signal', help='signal file', default=inputFileT2tt)
+    parser.add_option('--ttbar' , dest='ttbar' , help='ttbar file' , default=inputFilettbar)
+    parser.add_option('--ttZ', dest='ttZ', help='ttZ file', default=inputFilettZ)
+    parser.add_option('--WW' , dest='WW' , help='WW file' , default=inputFileWW)
+    parser.add_option('--ZZ' , dest='ZZ' , help='ZZ file' , default=inputFileZZ)
     
-    parser.add_option('--output' , dest='output' , help='name of output rootfile', default=hfilenm)
+    parser.add_option('--output' , dest='output' , help='name of output rootfile', default=cutfilenm)
     parser.add_option('--only' , dest='only' , help='if only one sample wants to be looked', default='no')
     parser.add_option('--except' , dest='ignore' , help='not run one of the samples', default='no')
     
+
+    parser.add_option('--sample'    , dest='sample'    , help='sample to run'    , default='no')
+    parser.add_option('--samplefile', dest='samplefile', help='file sample'      , default=inputFileT2tt)
+    parser.add_option('--nsample'   , dest='nsample'   , help='# sample entries' , default=1000000)
+
     parser.add_option('--test' , dest='test' , help='run test on subset', default=False, action='store_true')
     (opt, args) = parser.parse_args()
-
-    folder = '../rootfiles/'
+    print cutfolder, "CUUT"
+    os.system("mkdir -p "+ cutfolder)
+    folder = './rootfiles/'
+    nSam   = int(opt.nsample)
     nttbar = int(opt.nttbar)
     nT2tt  = int(opt.nT2tt)
     nWW    = int(opt.nWW)
+    nZZ    = int(opt.nZZ)
+    nttZ   = int(opt.nttZ)
     if(opt.test):
-        nttbar=10000
-        nT2tt=1000
-        nWW=10000
+        nSam   =  1000
+        nT2tt  =  1000
+        nttbar = 10000
+        nWW    = 10000
+        nZZ    =  2000
+        nttZ   =  2000
     if('/' in opt.signal): inputFileT2tt=opt.signal
     else:
         inputFileT2tt=folder+opt.signal
@@ -209,43 +225,82 @@ if __name__ == '__main__':
     if('/' in opt.WW): inputFileWW=opt.WW
     else: inputFileWW=folder+opt.WW
     
-    if('/' in opt.output): hfilenm=opt.output
-    else: hfilenm='../Output/'+opt.output
+    if('/' in opt.output): cutfilenm=opt.output
+    else: 
+        outfol='./Output/'
+        cutfilenm=outfol+opt.output
+        os.System("mkdir -p"+outfol)
 
     print "signal from", inputFileT2tt
-    hfile = ROOT.TFile(hfilenm,"RECREATE","Example");
-    
-    signal_t = ROOT.TTree("T2tt","tree with signal");
-    ttbar_t  = ROOT.TTree("ttbar","tree with ttbar bkg");
-    WW_t     = ROOT.TTree("WW","tree with WW bkg")
 
-    ttbar_f  = ROOT.TFile.Open(inputFilettbar ,"READ")
-    WW_f     = ROOT.TFile.Open(inputFileWW ,"READ")
-    signal_f = ROOT.TFile.Open(inputFileT2tt ,"READ")
-    
-    WW_evs     = WW_f.Get('Events')
-    ttbar_evs  = ttbar_f.Get('Events')
-    signal_evs = signal_f.Get('Events')
 
-    samples= {'ttbar': [inputFilettbar,ttbar_t, nttbar],
-              'WW'   : [inputFileWW, WW_t, nWW],
-              'T2tt':[inputFileT2tt, signal_t,nT2tt]}
-    #print inputFilettbar
-    rmsamples=opt.ignore.split('_')
-    dosamples=opt.only.split('_')
-    print dosamples, rmsamples
-    for sample in samples:
-        if sample in rmsamples:
-            print "Sample", sample, "in --except option"
-            continue
-        if sample not in dosamples and "no" not in dosamples[0]:
-            print "Sample", sample, "\tnot in --only option"
-            continue
-        print samples[sample][0] 
-        tree   = samples[sample][1]
-        tfile  = ROOT.TFile.Open(samples[sample][0],"READ")
-        events = tfile.Get('Events')
-        loopentries(events,tree, sample, samples[sample][2])
-    
-    print "Writing tree in", hfilenm
+
+
+    if opt.sample is not "no":
+        sample=opt.sample
+        print "sample is", sample
+        tree_sam = ROOT.TTree(sample,"tree with"+sample+"bkg")
+        fileloc  = inputFileT2tt#opt.samplefile
+        file_sam = ROOT.TFile.Open(fileloc ,"READ")        
+        Evs_sam  = file_sam.Get('Events')
+        if(opt.test is True): outfol=cutfolder 
+        else: outfol="/afs/cern.ch/work/p/pmatorra/private/CMSSW_10_2_14/src/Optimisecuts/Output/"
+        if(os.path.exists(outfol) is False): os.system("mkdir -p "+outfol)
+        cutfilenm= outfol+"cuts_"+sample+".root"
+        hfile = ROOT.TFile(cutfilenm,"RECREATE","Example");
+
+        loopentries(Evs_sam,tree_sam,opt.sample,nSam)
+
+    else:
+        hfile = ROOT.TFile(cutfilenm,"RECREATE","Example");
+
+        signal_t = ROOT.TTree("T2tt","tree with signal");
+        ttbar_t  = ROOT.TTree("ttbar","tree with ttbar bkg");
+        WW_t     = ROOT.TTree("WW","tree with WW bkg")
+        ZZ_t     = ROOT.TTree("ZZ","tree with WW bkg")
+        ttZ_t    = ROOT.TTree("ttZ","tree with WW bkg")
+        
+        ttbar_f  = ROOT.TFile.Open(inputFilettbar ,"READ")
+        WW_f     = ROOT.TFile.Open(inputFileWW ,"READ")
+        ZZ_f     = ROOT.TFile.Open(inputFileZZ ,"READ")
+        ttZ_f    = ROOT.TFile.Open(inputFilettZ,"READ")
+        signal_f = ROOT.TFile.Open(inputFileT2tt ,"READ")
+        
+        WW_evs     = WW_f.Get('Events')
+        ZZ_evs     = ZZ_f.Get('Events')
+        ttZ_evs    = ttZ_f.Get('Events')
+        ttbar_evs  = ttbar_f.Get('Events')
+        signal_evs = signal_f.Get('Events')
+
+        
+        samples= {'ZZ'   :[inputFileZZ, ZZ_t, nZZ],
+                  'ttZ'  :[inputFilettZ, ttZ_t, nttZ],
+                  'ttbar': [inputFilettbar,ttbar_t, nttbar],
+                  'WW'   : [inputFileWW, WW_t, nWW],
+                  'T2tt':[inputFileT2tt, signal_t,nT2tt]}
+        #print inputFilettbar
+
+        rmsamples=opt.ignore.split('_')
+        dosamples=opt.only.split('_')
+        print dosamples, rmsamples
+        for sample in samples:
+            if sample in rmsamples:
+                print "Sample", sample, "in --except option"
+                continue
+            if sample not in dosamples and "no" not in dosamples[0]:
+                print "Sample", sample, "\tnot in --only option"
+                continue
+            if opt.sample not in "no" and sample not in opt.sample: 
+                print "Sample", sample, "not in ", opt.sample
+                continue
+
+            print samples[sample][0] 
+            tree   = samples[sample][1]
+            tfile  = ROOT.TFile.Open(samples[sample][0],"READ")
+            events = tfile.Get('Events')
+            loopentries(events,tree, sample, samples[sample][2])
+
+
+
+    print "Writing tree in", cutfilenm
     
