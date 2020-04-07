@@ -2,7 +2,7 @@
 bkgs=['ttbar', 'WW', 'ZZ', 'ttZ']
 def defaultcuts(entry,samplenm):
     if(samplenm in bkgs):
-        pttag=bool(entry.CleanJet_pt[0]!=entry.leadingPtTagged_btagDeepBM_1c)
+        pttag=bool(entry.CleanJet_pt[0]!=entry.leadingPtTagged)#_btagDeepBM_1c)
         
     else:
         pttag=bool(entry.CleanJet_pt[0]!=entry.leadingPtTagged)
@@ -27,7 +27,7 @@ def flavour_tag(entry, samplenm):
     massZ = 91.1876
     vetoZ = abs(entry.mll-massZ)<15.
     if(samplenm in bkgs):
-        btagW = entry.btagWeight_1tag_btagDeepBM_1c
+        btagW = entry.btagWeight_1tag#_btagDeepBM_1c
     else:
         btagW = entry.btagWeight_1tag
     bvetoW = 1-btagW

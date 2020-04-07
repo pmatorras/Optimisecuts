@@ -31,6 +31,7 @@ def dphi_lepjet(lepphi, jetphi1, jetphi2):
 def loopentries(sample,tree, samplenm, idxmax):
     counter=0
     print "looping over", samplenm, "\nfor",idxmax, "events"
+    
     evid, maxSV, nSV, njets, nbjets,nCleanjets, nbCleanjets, Dnjetstot, Dnbjetstot, isSF,btagW, bvetoW,\
     PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,SV_x,SV_y,SV_z,SV_chi2,\
     MET_sumEt,MET_pt,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,ISRcut,detall,dRll,detajj,dRjj,\
@@ -148,8 +149,8 @@ def loopentries(sample,tree, samplenm, idxmax):
             bjet1_pt[0]   = entry.leadingPtTagged
             bjet2_pt[0]   = entry.trailingPtTagged
         else:
-            bjet1_pt[0]   = entry.leadingPtTagged_btagDeepBM_1c
-            bjet2_pt[0]   = entry.trailingPtTagged_btagDeepBM_1c
+            bjet1_pt[0]   = entry.leadingPtTagged#_btagDeepBM_1c
+            bjet2_pt[0]   = entry.trailingPtTagged#_btagDeepBM_1c
 
         #dRll,dRjj
         #dRjj=(
@@ -229,10 +230,10 @@ if __name__ == '__main__':
     else: 
         outfol='./Output/'
         cutfilenm=outfol+opt.output
-        os.System("mkdir -p"+outfol)
+        os.system("mkdir -p "+outfol)
 
     print "signal from", inputFileT2tt
-
+    print "OUTPUT FILE", cutfilenm, opt.output
 
 
 
@@ -246,7 +247,7 @@ if __name__ == '__main__':
         if(opt.test is True): outfol=cutfolder 
         else: outfol="/afs/cern.ch/work/p/pmatorra/private/CMSSW_10_2_14/src/Optimisecuts/Output/"
         if(os.path.exists(outfol) is False): os.system("mkdir -p "+outfol)
-        cutfilenm= outfol+"cuts_"+sample+".root"
+        #if(opt.output is not ): cutfilenm= outfol+"cuts_"+sample+".root"
         hfile = ROOT.TFile(cutfilenm,"RECREATE","Example");
 
         loopentries(Evs_sam,tree_sam,opt.sample,nSam)
