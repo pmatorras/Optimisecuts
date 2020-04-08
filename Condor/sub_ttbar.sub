@@ -1,0 +1,7 @@
+executable            = /afs/cern.ch/work/p/pmatorra/private/CMSSW_10_2_14/src/Optimisecuts/run_loop.py 
+arguments             = ttbar 1000000  $(ttbar) Output/cutsttbar_$(Process).root
+output                = ./Condor/ttbar/job.$(ClusterId).out
+error                 = ./Condor/ttbar/job.$(ClusterId).err
+log                   = ./Condor/ttbar/job.$(ClusterId).log
++JobFlavour           = longlunch
+queue ttbar from ./Condor/joblistttbar.txt 
