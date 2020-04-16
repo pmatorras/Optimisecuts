@@ -25,6 +25,10 @@ def dphi_lepjet(lepphi, jetphi1, jetphi2):
     if(dphimin>np.pi): dphimin=2*np.pi-dphimin
 
     return dphimin, dphimax
+def dphi(phi1,phi2):
+    dphi=abs(phi1-phi2)
+    if(dphi>np.pi): dphi=2*np.pi-dphi
+    return dphi
 
 
 
@@ -34,10 +38,10 @@ def loopentries(sample,tree, samplenm, idxmax):
     
     evid, maxSV, nSV, njets, nbjets,nCleanjets, nbCleanjets, Dnjetstot, Dnbjetstot, isSF,btagW, bvetoW,\
     PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,SV_x,SV_y,SV_z,SV_chi2,\
-    MET_sumEt,MET_pt,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,ISRcut,detall,dRll,detajj,dRjj,\
+    MET_sumEt,MET_pt,MET_phi,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,ISRcut,detall,dRll,detajj,dRjj,\
     dphill,dphijj, dphil1jmin,dphil1jmax,dphil1bmin,dphil1bmax, dphil2jmin,dphil2jmax,dphil2bmin,dphil2bmax,\
     lep1_pt,lep1_eta,lep1_phi,lep2_pt,lep2_eta,lep2_phi, jet1_pt,jet1_eta,jet1_phi,jet2_pt,jet2_eta,jet2_phi,\
-    bjet1_pt,bjet1_eta,bjet1_phi,bjet2_pt,bjet2_eta,bjet2_phi= defBranches(tree, samplenm)
+    bjet1_pt,bjet1_eta,bjet1_phi,bjet2_pt,bjet2_eta,bjet2_phi,dphil1MET,dphil2MET, dphilepsumMET, ptlepsum= defBranches(tree, samplenm)
 
 
     def nBjets(pt, eta, phi,btag, njets, cleanidx):
@@ -102,6 +106,7 @@ def loopentries(sample,tree, samplenm, idxmax):
         evid[0]=idx
         MET_sumEt[0] = entry.MET_sumEt
         MET_pt[0]    = entry.MET_pt
+        MET_phi[0]   = entry.MET_phi
         
         
         PV_x[0]    = entry.PV_x
@@ -121,23 +126,27 @@ def loopentries(sample,tree, samplenm, idxmax):
         lep2_pt[0]  = entry.Lepton_pt[1]
         lep2_eta[0] = entry.Lepton_eta[1]
         lep2_phi[0] = entry.Lepton_phi[1]
+        
+        ptlepsum[0] = lep1_pt[0]+lep2_pt[0]
 
-        dphill[0]  = abs(entry.Lepton_phi[0]-entry.Lepton_phi[1])
-        detall[0]  = abs(entry.Lepton_eta[0]-entry.Lepton_eta[1])
-        if(dphill[0]>np.pi): dphill[0]=2*np.pi-dphill[0]
-
+        dphil1MET[0] = dphi(lep1_phi[0],MET_phi[0])
+        dphil2MET[0] = dphi(lep2_phi[0],MET_phi[0])
+        dphill[0]    = dphi(lep1_phi[0],lep2_phi[0])
+        detall[0]    = abs(entry.Lepton_eta[0]-entry.Lepton_eta[1])
+        dphilepsum   = (lep1_phi[0]-lep2_phi[0])
+        dphilepsumMET[0]=dphi(dphilepsum,MET_phi[0])
+        
         jet1_pt[0]  = entry.CleanJet_pt[0]
         jet1_eta[0] = entry.CleanJet_eta[0]
         jet1_phi[0] = entry.CleanJet_phi[0]
         
         if(nCleanJet>1):
-            dphijj[0]  = abs(entry.CleanJet_phi[0]-entry.CleanJet_phi[1])
-            detajj[0]  = abs(entry.CleanJet_eta[0]-entry.CleanJet_eta[1])
             jet2_pt[0]  = entry.CleanJet_pt[1]
             jet2_eta[0] = entry.CleanJet_eta[1]
             jet2_phi[0] = entry.CleanJet_phi[1]
+            dphijj[0]  = dphi(jet1_phi[0],jet2_phi[0])
+            detajj[0]  =  abs(jet1_eta[0]-jet2_eta[0])
 
-        if(dphijj[0]>np.pi): dphijj[0]=2*np.pi-dphijj[0]
         dRll[0] = np.sqrt(dphill[0]*dphill[0]+detall[0]*detall[0])
         dRjj[0] = np.sqrt(dphijj[0]*dphijj[0]+detajj[0]*detajj[0])
         
@@ -149,8 +158,8 @@ def loopentries(sample,tree, samplenm, idxmax):
             bjet1_pt[0]   = entry.leadingPtTagged
             bjet2_pt[0]   = entry.trailingPtTagged
         else:
-            bjet1_pt[0]   = entry.leadingPtTagged#_btagDeepBM_1c
-            bjet2_pt[0]   = entry.trailingPtTagged#_btagDeepBM_1c
+            bjet1_pt[0]   = entry.leadingPtTagged_btagDeepBM_1c
+            bjet2_pt[0]   = entry.trailingPtTagged_btagDeepBM_1c
 
         #dRll,dRjj
         #dRjj=(
@@ -232,7 +241,7 @@ if __name__ == '__main__':
         cutfilenm=outfol+opt.output
         os.system("mkdir -p "+outfol)
 
-    print "signal from", inputFileT2tt
+    print "sample from", opt.samplefile
     print "OUTPUT FILE", cutfilenm, opt.output
 
 
@@ -241,7 +250,7 @@ if __name__ == '__main__':
         sample=opt.sample
         print "sample is", sample
         tree_sam = ROOT.TTree(sample,"tree with"+sample+"bkg")
-        fileloc  = inputFileT2tt#opt.samplefile
+        fileloc  = opt.samplefile
         file_sam = ROOT.TFile.Open(fileloc ,"READ")        
         Evs_sam  = file_sam.Get('Events')
         if(opt.test is True): outfol=cutfolder 

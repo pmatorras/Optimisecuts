@@ -32,9 +32,9 @@ def makeSubFile2(filename,folder,sample, nsample, fileloc, ofilenm):#year,tag,si
     #print "creating "+filename+" \t ARGUMENTS:\n ",arguments, "\n"                            
     f.write("executable            = "+PWD+"run_loop.py \n")
     f.write("arguments             = "+arguments+"\n")
-    f.write("output                = "+folder+"/"+sample+"/job.$(ClusterId).out\n")
-    f.write("error                 = "+folder+"/"+sample+"/job.$(ClusterId).err\n")
-    f.write("log                   = "+folder+"/"+sample+"/job.$(ClusterId).log\n")
+    f.write("output                = "+folder+"/"+sample+"/job.$(Process).out\n")
+    f.write("error                 = "+folder+"/"+sample+"/job.$(Process).err\n")
+    f.write("log                   = "+folder+"/"+sample+"/job.$(Process).log\n")
     #f.write("+JobFlavour           = nextweek\n")                                             
     f.write("+JobFlavour           = longlunch\n")#testmatch\n")
     #f.write("+JobFlavour           = tomorrow\n")                                             

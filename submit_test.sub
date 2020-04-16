@@ -1,7 +1,0 @@
-executable            = /afs/cern.ch/work/p/pmatorra/private/CMSSW_10_2_14/src/Optimisecuts/run_loop.py
-arguments             = T2tt 1000 no
-output                = ./Condor/$(ClusterId).out
-error                 = ./Condor/$(ClusterId).err
-log                   = ./Condor/$(ClusterId).log
-+JobFlavour           = microcentury
-queue

@@ -28,7 +28,7 @@ def defBranches(tree,samplenm):
 
     MET_sumEt = array('d',[-999])
     MET_pt    = array('d',[-999])
-
+    MET_phi   = array('d',[-999])
     PV_x    = array('f',[-999])
     PV_y    = array('f',[-999])
     PV_z    = array('f',[-999])
@@ -79,16 +79,20 @@ def defBranches(tree,samplenm):
     bjet1_phi = array('d',[-999])
     bjet2_phi = array('d',[-999])
 
+    dphil1MET = array('d',[-999])
     dphil1jmin= array('d',[-999])
     dphil1jmax= array('d',[-999])
     dphil1bmin= array('d',[-999])
     dphil1bmax= array('d',[-999])
 
+    dphil2MET = array('d',[-999])
     dphil2jmin= array('d',[-999])
     dphil2jmax= array('d',[-999])
     dphil2bmin= array('d',[-999])
     dphil2bmax= array('d',[-999])
 
+    dphilepsumMET = array('d',[-999])
+    ptlepsum      = array('d',[-999])
     dRll    = array('d',[-999])
     detall  = array('d',[-999])
     dphijj  = array('d',[-999])
@@ -117,6 +121,7 @@ def defBranches(tree,samplenm):
 
     tree.Branch ("MET_sumEt_"+samplenm,MET_sumEt, "MET_sumEt/D");
     tree.Branch ("MET_pt_"   +samplenm,MET_pt   , "MET_pt/D");
+    tree.Branch ("MET_phi_"  +samplenm,MET_phi  , "MET_phi/D");
 
     tree.Branch ("PV_x_"   +samplenm,PV_x   , "PV_x/F");
     tree.Branch ("PV_y_"   +samplenm,PV_y   , "PV_y/F");
@@ -175,20 +180,24 @@ def defBranches(tree,samplenm):
     tree.Branch ("detajj_"+samplenm,detajj, "detajj/D");
     tree.Branch ("dRjj_" +samplenm,dRjj  , "dRjj/D");
 
+    tree.Branch ("dphil1MET_" +samplenm,dphil1MET , "dphil1MET/D");
     tree.Branch ("dphil1jmin_"+samplenm,dphil1jmin , "dphil1jmin/D");
     tree.Branch ("dphil1jmax_"+samplenm,dphil1jmax , "dphil1jmax/D");
     tree.Branch ("dphil1bmin_"+samplenm,dphil1bmin , "dphil1bmin/D");
     tree.Branch ("dphil1bmax_"+samplenm,dphil1bmax , "dphil1bmax/D");
 
+    tree.Branch ("dphil2MET_" +samplenm,dphil2MET  , "dphil2MET/D");
     tree.Branch ("dphil2jmin_"+samplenm,dphil2jmin , "dphil2jmin/D");
     tree.Branch ("dphil2jmax_"+samplenm,dphil2jmax , "dphil2jmax/D");
     tree.Branch ("dphil2bmin_"+samplenm,dphil2bmin , "dphil2bmin/D");
     tree.Branch ("dphil2bmax_"+samplenm,dphil2bmax , "dphil2bmax/D");
 
-    
+    tree.Branch ("dphilepsumMET_"+samplenm,dphilepsumMET , "dphilepsumMET/D");
+    tree.Branch ("ptlepsum_"     +samplenm,ptlepsum      , "ptlepsum/D");
+
     return evid, maxSV, nSV, njets, nbjets,nCleanjets, nbCleanjets, Dnjetstot, Dnbjetstot, isSF,btagW, bvetoW,\
         PV_x,PV_y,PV_z,PV_npvs,PV_chi2,SV_eta,SV_phi,SV_pt,SV_mass,SV_x,SV_y,SV_z,SV_chi2,\
-        MET_sumEt,MET_pt,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,ISRcut,detall,dRll,detajj,dRjj,\
+        MET_sumEt,MET_pt,MET_phi,mll,mt2ll,nLepton,ptmiss,susyMstop,susyMLSP,ISRcut,detall,dRll,detajj,dRjj,\
         dphill,dphijj, dphil1jmin,dphil1jmax,dphil1bmin,dphil1bmax, dphil2jmin,dphil2jmax,dphil2bmin,dphil2bmax,\
         lep1_pt, lep1_eta,lep1_phi,lep2_pt,lep2_eta,lep2_phi, jet1_pt,jet1_eta,jet1_phi,jet2_pt,jet2_eta,jet2_phi,\
-        bjet1_pt,bjet1_eta,bjet1_phi,bjet2_pt,bjet2_eta,bjet2_phi
+        bjet1_pt,bjet1_eta,bjet1_phi,bjet2_pt,bjet2_eta,bjet2_phi, dphil1MET,dphil2MET, dphilepsumMET, ptlepsum
