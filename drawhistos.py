@@ -131,7 +131,7 @@ allvars=["evid", "isSF", "btagW", "bvetoW", "nSV", "nLepton", "ISRcut","nbCleanj
          "jet1_pt","jet2_pt","dphill", "dphijj","detajj","dRjj","Dnjetstot","Dnbjetstot",\
          "SV_x", "SV_y", "SV_z", "SV_chi2","SV_eta", "SV_phi", "SV_pt", "SV_mass",\
          "PV_x", "PV_y", "PV_z", "PV_chi2","PV_npvs","susyMstop","susyMLSP","ptlepsum",\
-         "njets", "nbjets", "nCleanjets", "nbCleanjets","dphill:(ptlepsum)",\
+         "njets", "nbjets", "nCleanjets", "nbCleanjets","dphill:ptlepsum",\
          "dphil1jmin","dphil1jmax","dphil1bmin","dphil1bmax","dphil1MET","dphilepsumMET",\
          "dphil2jmin","dphil2jmax","dphil2bmin","dphil2bmax","dphil2MET","MET_phi",\
          "bjet1_pt","bjet1_eta", "bjet1_phi", "bjet2_pt", "bjet2_eta", "bjet2_phi"]
@@ -187,22 +187,16 @@ for var in variables:
             for fl in flavours:
                 varsplit=var.split(':')
                 varnm=''
-                lepsum='lep1_pt+lep2_pt'
-                islepsum=bool(lepsum in var)
                 ptcond1=""#smalldphi"#"smalldphi"
-                for idx,v in enumerate(varsplit):
-                    if idx==0:
-                        if(lepsum in v): v="lep_ptsum"
-                        varnm+=v+ptcond1
-                    else:
-                        if(lepsum in v): v="lep_ptsum"
-                        varnm+="VS"+v+ptcond1
-
                 histnm = varnm+'_'+bjet+'_'+fl+'_'+isrnm
                 nBinOri= 500000
                 nBinFin=     12
                 xMinOri=      0.
                 xMaxOri=   5000.
+                if "evid" in var:
+                    xminOri=0
+                    xMaxOri=1000000
+                    nBinOri=1000000
                 if "SV" in var:
                     xMinOri=    -5
                     xMaxOri=  1000.
@@ -233,7 +227,7 @@ for var in variables:
                 is2D=bool(len(var.split(':'))>1)
                 if(is2D is False):
                     xRanOri= "("+str(nBinOri)+","+str(xMinOri)+","+str(xMaxOri)+")"
-                elif is2D is True and islepsum is True:
+                elif is2D is True and "ptlepsum"  in var :
                     xRanOri= "(30,40,300,30,0,3.15)"
                 dtest=OrderedDict({})
                 for sample in samples:
@@ -260,9 +254,7 @@ for var in variables:
                     
                     bjetcond  = bjets[bjet]
                     condition = bjetcond+'*('+flcond+onlyfill+isrcond+ptsumcond[ptcond1]+')'
-                    print treevar, condition
                     tree.Draw(treevar, condition)
-                    exit()
                     dtest[sample]=histo
                     #divide in different mass ranges
                     for mstop in mStops:
@@ -315,6 +307,7 @@ for var in variables:
                     os.system("cp "+optim+'/index.php '+outputfolder)
                     c1.SaveAs(outputfolder+histnm+'.png')
                 elif is2D is True:
+            
                     outputfolder=samplefolder+'/'+varnm+'/'+cfolder
                     os.system('mkdir -p '+outputfolder)
                     os.system("cp "+optim+'/index.php '+outputfolder)
