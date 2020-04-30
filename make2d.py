@@ -69,7 +69,7 @@ for dm in dmass:
         signif2D.SetYTitle("m_{T2ll} [GeV]")
         signif2D.SetXTitle("p_{T}^{miss} [GeV]")
         allhistos = getall(inpfile)# folder)
-        nsig      = 1
+        nsig      = 0
 
         #For a given region and dm, add all histograms
         for ihis, histloc in enumerate(allhistos):
