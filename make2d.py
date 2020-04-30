@@ -28,7 +28,7 @@ inpfile=TFile ('../rootfiles/plots_HighPtMissOptimisationRegion_SM-T2tt_mS-400to
 wloc=os.environ['WWW']
 optim=wloc+"/susy/optimisation/"
 regions=["VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
-dmass={"dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
+dmass={"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
 gROOT.SetBatch(True)#False)#True)
 folder="../Histograms/significance/"
 hminMT2   =    0
@@ -40,12 +40,19 @@ nPtm =  100
         
 for dm in dmass:
     print "MASS:\t", dm
-    foldm=folder+dm
-    os.system("mkdir -p "+foldm)
     for reg in regions:
+        dmfol=dm
+        if "AN" in dm:
+            dmfol=dmass[dm]
+            print "Get AN masspoints", dmass[dm]
+        else:
+            dmmin= dmass[dm][0]
+            dmmax= dmass[dm][1]
+        
+        foldm=folder+dmfol+'/'+reg
+        os.system("mkdir -p "+foldm)
+    
         print "REGION:", reg
-        dmmin= dmass[dm][0]
-        dmmax= dmass[dm][1]
         sigunrol  = TH1D("sigunrol" +reg+dm, reg, 10000  , 0, 10000)
         bkgunrol  = TH1D("bkgunrol" +reg+dm, reg, 10000  , 0, 10000)
         sigPtm = TH1D("sigPtmiss"+reg+dm, reg, nPtm, 0, hmaxPtm)
@@ -71,22 +78,23 @@ for dm in dmass:
             isSig  = False
             if(reg not in histnm): continue
             #if ihis>3: break # continue
-
             if len(hsplit) >1:
                 isSig = True
-                mass  = hsplit[1].replace('-','_').split('_')
-                mS    = int(mass[1])
-                mX    = int(mass[3])
-                dm_i  = mS-mX
-                if(mS<mSmin    or mS>mSmax  ): continue
-                if(dm_i<=dmmin or dm_i>dmmax): continue
+                if "AN" in dm:
+                    if dmass[dm] not in histnm: continue
+                else:
+                    mass  = hsplit[1].replace('-','_').split('_')
+                    mS    = int(mass[1])
+                    mX    = int(mass[3])
+                    dm_i  = mS-mX
+                    if(mS<mSmin    or mS>mSmax  ): continue
+                    if(dm_i<=dmmin or dm_i>dmmax): continue
     
             if 'ptmissmt2' in histnm: nsig=addhisto(sigunrol,bkgunrol,isSig, nsig,True)
             elif 'mt2'     in histnm: nsig=addhisto(sigMT2,bkgMT2,isSig, nsig)
             elif 'ptmiss'  in histnm: nsig=addhisto(sigPtm,bkgPtm,isSig, nsig)
-        print "nsig", nsig
+        print "number of Mass points:", nsig
         #if(ibkg>0): print 10*x,20*y, ibkg, isig
-
 
         
         #recover the 2D histogram from the unrolled 
@@ -102,13 +110,11 @@ for dm in dmass:
             x+=1
             isig=sigunrol.GetBinContent(i)/nsig
             ibkg=bkgunrol.GetBinContent(i)
-            #if ientry<0.01: continue
             if(isig>0):signal2D.SetBinContent(x,y,isig)
             if(ibkg>=0):
                 bkg2D.SetBinContent(x,y, ibkg)
                 #if(x<10 and y<5):print x, y, ibkg
             if(ibkg+isig>0 and isig>=0): signif2D.SetBinContent(x,y,isig/np.sqrt(ibkg+isig))
-
 
 
         
@@ -118,50 +124,63 @@ for dm in dmass:
         sigprofY=signal2D.ProfileY()
 
         #Get desired variable binning
-        wsumMT2=0
-        wYmax=500
-        wsumPtm=0
-        binsMT2=[0]
-        rangMT2=[0]
-        binsPtm=[5]
-        rangPtm=[100]
-        totWPtm=bkgPtm.GetSumOfWeights()
-        totWMT2=bkgMT2.GetSumOfWeights()
-        wmaxPtm=0.05*totWPtm
-        wmaxMT2=0.005*totWMT2#0.01
         
         #print wYmax/totWY
         #exit()
-        print "tot2\t", int(totWPtm), '\t',int(totWMT2)
-        for i in range(1,99):
-            wbkgMT2=bkgMT2.GetBinContent(i)
-            wbkgPtm=bkgPtm.GetBinContent(i)
-            #print i,"\tX:", int(wbkgMT2), "\tY:", int(wbkgPtm)
-            if(wbkgPtm>0): wsumPtm+=wbkgPtm
-            if(wbkgMT2>0): wsumMT2+=wbkgMT2
-            if wsumPtm>wmaxPtm:
-                wsumPtm=0
-                locPtm=i*(hmaxPtm-hminPtm)/nPtm
-                binsPtm.append(i)
-                rangPtm.append(locPtm)
-                print "Y:",locPtm, "\tnew bin", i
-            if wsumMT2>wmaxMT2:
-                wsumMT2=0
-                locMT2=i*(hmaxMT2-hminMT2)/nMT2
-                binsMT2.append(i)
-                rangMT2.append(locMT2)
-                print "X:",locMT2, "\tnew bin"
-        #print  binsPtm, binsMT2
+        
+        paperbin=True
+        varbin='varbin'
+        if(paperbin is True):
+            varbin='ANbin'
+            rangMT2=[   0,  20,  40,  60,  80, 100, 120]
+            rangPtm=[ 100, 140, 200, 300]
+            
+        else:
+            wsumMT2=0
+            wYmax=500
+            wsumPtm=0
+            binsMT2=[0]
+            rangMT2=[0]
+            binsPtm=[5]
+            rangPtm=[100]
+            totWPtm=bkgPtm.GetSumOfWeights()
+            totWMT2=bkgMT2.GetSumOfWeights()
+            wmaxPtm=0.05*totWPtm
+            wmaxMT2=0.005*totWMT2#0.01
+        
+            print "tot2\t", int(totWPtm), '\t',int(totWMT2)
+            for i in range(1,99):
+                wbkgMT2=bkgMT2.GetBinContent(i)
+                wbkgPtm=bkgPtm.GetBinContent(i)
+                #print i,"\tX:", int(wbkgMT2), "\tY:", int(wbkgPtm)
+                if(wbkgPtm>0): wsumPtm+=wbkgPtm
+                if(wbkgMT2>0): wsumMT2+=wbkgMT2
+                if wsumPtm>wmaxPtm:
+                    wsumPtm=0
+                    locPtm=i*(hmaxPtm-hminPtm)/nPtm
+                    binsPtm.append(i)
+                    rangPtm.append(locPtm)
+                    print "Y:",locPtm, "\tnew bin", i
+                if wsumMT2>wmaxMT2:
+                    wsumMT2=0
+                    locMT2=i*(hmaxMT2-hminMT2)/nMT2
+                    binsMT2.append(i)
+                    rangMT2.append(locMT2)
+                    print "X:",locMT2, "\tnew bin"
+            #print  binsPtm, binsMT2
+
         print "Ptm:\t",rangPtm, "\nMT2:\t",rangMT2
 
         #Fill signal and bakground for variable binwidth
 
-        nvarMT2=len(binsMT2)
-        nvarPtm=len(binsPtm)
-        vartitle="s/#sqrt{s+b} ("+reg+"-"+dm+"); p_{T}^{miss}; m_{T2}^{ll}"
-        bkgvar = TH2D("bkgvar"+reg+dm,"",len(rangPtm)-1,array('d',rangPtm),len(rangMT2)-1,array('d', rangMT2))
-        sigvar = TH2D("sigvar"+reg+dm,"",len(rangPtm)-1,array('d',rangPtm),len(rangMT2)-1,array('d', rangMT2))
-        signifvar = TH2D("signifvar"+reg+dm,vartitle,len(rangPtm)-1,array('d',rangPtm),len(rangMT2)-1,array('d', rangMT2))
+        nvarMT2=len(rangMT2)
+        nvarPtm=len(rangPtm)
+        
+        vartitle="("+reg+"-"+dm+"); p_{T}^{miss}; m_{T2}^{ll}"
+        signiftitle="s/#sqrt{s+b} "+vartitle
+        bkgvar = TH2D("bkgvar"+reg+dm,"bkg "   +vartitle,len(rangPtm)-1,array('d',rangPtm),len(rangMT2)-1,array('d', rangMT2))
+        sigvar = TH2D("sigvar"+reg+dm,"signal "+vartitle,len(rangPtm)-1,array('d',rangPtm),len(rangMT2)-1,array('d', rangMT2))
+        signifvar = TH2D("signifvar"+reg+dm, signiftitle,len(rangPtm)-1,array('d',rangPtm),len(rangMT2)-1,array('d', rangMT2))
         for ibin in range(1, nPtm):
             for jbin in range(1, nMT2):
                 bkg=bkg2D.GetBinContent(ibin, jbin)
@@ -171,16 +190,16 @@ for dm in dmass:
                 bkgvar.Fill(locPtm,locMT2,bkg)
                 sigvar.Fill(locPtm,locMT2,sig)
                 if locPtm<100 or locPtm>200 or locMT2>100: continue
-
+                #print "MT2:\t",locMT2, "PTM:\t",locPtm
                 
         #Fill significance plot
         for xbin in range (1,nvarPtm+1): #One is due to empty underflow bin
             for ybin in range(1,nvarMT2+1):
                 isig = sigvar.GetBinContent(xbin,ybin)
-                ibkg = bkgvar.GetBinContent(xbin,1)
+                ibkg = bkgvar.GetBinContent(xbin,ybin)
                 if(isig+ibkg>0): signif = isig/np.sqrt(ibkg+isig)
                 else: signif=0
-                #print rangPtm[xbin-1], rangMT2[ybin-1],isig#, signif
+                #print rangPtm[xbin-1],"\t", rangMT2[ybin-1],"\t", round(isig,3),"\t", round(ibkg,3)#, signif
                 signifvar.SetBinContent(xbin, ybin,signif)
 
 
@@ -192,18 +211,27 @@ for dm in dmass:
         gStyle.SetPaintTextFormat("4.3f");
         gStyle.SetOptStat(0);
 
+
+
+        
+        sigvar.Draw('colz text')
+        sigvar.GetYaxis().SetRangeUser(0,400);
+        sigvar.GetXaxis().SetRange(0,800);
+        plot_nm=varbin+"-PtmissvsMT2"#+reg+'-'+dm+'.png'
+        c1.SaveAs(foldm+"/"+plot_nm+'_signal.png')
+
+
+        bkgvar.Draw('colz text')
+        bkgvar.GetYaxis().SetRangeUser(0,400);
+        bkgvar.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+"/"+plot_nm+'_bkg.png')
+
+
         signifvar.Draw('colz text')
         signifvar.GetYaxis().SetRangeUser(0,400);
         signifvar.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+'/'+plot_nm+'_signif.png')
 
-        #signal2D.Draw('colz')
-        #bkgprofY.Draw()#('colz')
-        #bkg2D.Draw('colz')
-        #signif2D.Draw('colz')
-        #signif2D.GetYaxis().SetRangeUser(0,400);
-        #signif2D.GetXaxis().SetRangeUser(0,800);
-        c1.SaveAs(foldm+"/PtmissvsMT2"+reg+'-'+dm+'.png')
-        #os.system("display "+foldm+"/mt2vsPtmiss"+reg+'-'+dm+".png")
         #exit()
         os.system("cp "+optim+'/index.php '+foldm)
 cpweb= 'cp -r '+folder+" "+ optim
