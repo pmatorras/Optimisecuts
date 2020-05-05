@@ -7,6 +7,27 @@ wloc = os.environ['WWW']
 gROOT.SetBatch(True)
 gStyle.SetPaintTextFormat("4.3f");
 gStyle.SetOptStat(0);
+#Fill signal and bakground for variable binwidth
+def fillvarbins(bkg2D,sig2D,bkgvar,sigvar):
+    for ibin in range(1, nPtm):
+        for jbin in range(1, nMT2):
+            bkg = bkg2D.GetBinContent(ibin, jbin)
+            sig = sig2D.GetBinContent(ibin, jbin)
+            locMT2 = (jbin-0.5)*(hmaxMT2-hminMT2)/nMT2
+            locPtm = (ibin-0.5)*(hmaxPtm-hminPtm)/nPtm
+            bkgvar.Fill(locPtm, locMT2, bkg)
+            sigvar.Fill(locPtm, locMT2, sig)
+            #if sig>0: print locPtm, locMT2, sig
+
+#Fill significance plot for variable binning
+def fillsignif(bkgvar,sigvar,signifvar):
+    for xbin in range (1,nvarPtm+1): #One is due to empty underflow bin
+        for ybin in range(1,nvarMT2+1):
+            isig = sigvar.GetBinContent(xbin,ybin)
+            ibkg = bkgvar.GetBinContent(xbin,ybin)
+            if(isig+ibkg>0): signif = isig/np.sqrt(ibkg+isig)
+            else: signif = 0
+            signifvar.SetBinContent(xbin, ybin, signif)
 
 
 #Get all histograms/trees within a TFile
@@ -26,8 +47,10 @@ def addhisto(sig, bkg, isSig, nsig, count=False):
         sig.Add(histo)
     else: bkg.Add(histo)
     return nsig
+
+#Main area
 yearfol='2016'
-#yearfol='2016-2017-2018'
+yearfol='2016-2017-2018'
 if '-' in yearfol:
     year=''
 else:
@@ -43,7 +66,7 @@ hmaxPtm = 2000
 nMT2 =  100
 nPtm =  100
 
-regions = ["VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
+regions = ["combined", "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
 dmass   = {"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
 
 for dm in dmass:
@@ -69,7 +92,7 @@ for dm in dmass:
         sigMT2 = TH1D("sigMT2"    +reg+dm, reg, nMT2, 0, hmaxMT2)
         bkgMT2 = TH1D("bkgMT2"    +reg+dm, reg, nMT2, 0, hmaxMT2)
 
-        signal2D = TH2D("signal2D"+reg+dm, reg, nPtm, hminPtm, hmaxPtm,nMT2, hminMT2,hmaxMT2)
+        sig2D    = TH2D("sig2D"   +reg+dm, reg, nPtm, hminPtm, hmaxPtm,nMT2, hminMT2,hmaxMT2)
         bkg2D    = TH2D("bkgs2D"  +reg+dm, reg, nPtm, hminPtm, hmaxPtm,nMT2, hminMT2,hmaxMT2)
         signif2D = TH2D("signif2D"+reg+dm, reg, nPtm, hminPtm, hmaxPtm,nMT2, hminMT2,hmaxMT2)
         mSmin = 400
@@ -85,7 +108,7 @@ for dm in dmass:
             histnm = histloc[0]
             hsplit = histnm.split('mS')
             isSig  = False
-            if(reg not in histnm): continue
+            if(reg not in histnm and "comb" not in reg): continue
             if len(hsplit) >1:
                 isSig = True
                 if "AN" in dm:
@@ -116,7 +139,7 @@ for dm in dmass:
             x+=1
             isig = sigunrol.GetBinContent(i)/nsig
             ibkg = bkgunrol.GetBinContent(i)
-            if(isig>0): signal2D.SetBinContent(x,y,isig)
+            if(isig>0): sig2D.SetBinContent(x,y,isig)
             if(ibkg>=0):
                 bkg2D.SetBinContent(x,y, ibkg)
                 #if(x<10 and y<5):print x, y, ibkg
@@ -127,7 +150,7 @@ for dm in dmass:
         #Make profiles (currently unused)
         bkgprofX = bkg2D.ProfileX()
         bkgprofY = bkg2D.ProfileY()
-        sigprofY = signal2D.ProfileY()
+        sigprofY = sig2D.ProfileY()
 
         #Variable binning if want to reproduce AN binning
         binAN  = True
@@ -175,6 +198,18 @@ for dm in dmass:
         nvarMT2=len(rangMT2)
         nvarPtm=len(rangPtm)
 
+
+
+        #Get for variable binning add in quadrature 
+        #for imt2 in range():
+        #    for jbin in range(0,nMT2):
+
+
+        #exit()
+
+
+
+        #exit()
         #Define 2D histograms with the variable binwidth
         vartitle    = "("+reg+"-"+dm+"); p_{T}^{miss}; m_{T2}^{ll}"
         signiftitle = "s/#sqrt{s+b} "+vartitle
@@ -185,30 +220,15 @@ for dm in dmass:
         bkgvar    = TH2D("bkgvar"+reg+dm,"bkg "   +vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
         sigvar    = TH2D("sigvar"+reg+dm,"signal "+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
         signifvar = TH2D("signifvar"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
-        #Fill signal and bakground for variable binwidth
-        for ibin in range(1, nPtm):
-            for jbin in range(1, nMT2):
-                bkg = bkg2D.GetBinContent(ibin, jbin)
-                sig = signal2D.GetBinContent(ibin, jbin)
-                locMT2 = (jbin-0.5)*(hmaxMT2-hminMT2)/nMT2
-                locPtm = (ibin-0.5)*(hmaxPtm-hminPtm)/nPtm
-                bkgvar.Fill(locPtm, locMT2, bkg)
-                sigvar.Fill(locPtm, locMT2, sig)
-                
-        #Fill significance plot for variable binning 
-        for xbin in range (1,nvarPtm+1): #One is due to empty underflow bin
-            for ybin in range(1,nvarMT2+1):
-                isig = sigvar.GetBinContent(xbin,ybin)
-                ibkg = bkgvar.GetBinContent(xbin,ybin)
-                if(isig+ibkg>0): signif = isig/np.sqrt(ibkg+isig)
-                else: signif = 0
-                signifvar.SetBinContent(xbin, ybin, signif)
-
-
+        
+        fillvarbins(bkg2D,sig2D,bkgvar,sigvar)
+        
+        fillsignif(bkgvar,sigvar,signifvar)
+        
         c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1200, 900 )
 
 
-
+        #exit()
 
         
         sigvar.Draw('colz text')
