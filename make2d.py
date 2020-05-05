@@ -26,11 +26,16 @@ def addhisto(sig, bkg, isSig, nsig, count=False):
         sig.Add(histo)
     else: bkg.Add(histo)
     return nsig
-            
-
-inpfile = TFile ('../rootfiles/plots_HighPtMissOptimisationRegion_SM-T2tt_mS-400to700.root', "READ")
+yearfol='2016'
+#yearfol='2016-2017-2018'
+if '-' in yearfol:
+    year=''
+else:
+    year=yearfol+'_'
+yearfol=yearfol+'/'
+inpfile = TFile ('../rootfiles/plots_HighPtMissOptimisationRegion_'+year+'SM-T2tt_mS-400to700.root', "READ")
 optim   = wloc+"/susy/optimisation/"
-folder  ="../Histograms/significance/"
+folder  ="../Histograms/""significance/"+yearfol
 hminMT2 =    0
 hmaxMT2 = 1000
 hminPtm =    0
