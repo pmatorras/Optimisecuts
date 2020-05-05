@@ -200,7 +200,7 @@ for dm in dmass:
                 signifvar.SetBinContent(xbin, ybin, signif)
 
 
-        c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1600, 900 )
+        c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1200, 900 )
 
 
 
