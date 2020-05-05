@@ -19,6 +19,9 @@ def fillvarbins(bkg2D,sig2D,bkgvar,sigvar):
             sigvar.Fill(locPtm, locMT2, sig)
             #if sig>0: print locPtm, locMT2, sig
 
+def getsignifsum(e):
+    print 3
+
 #Fill significance plot for variable binning
 def fillsignif(bkgvar,sigvar,signifvar):
     for xbin in range (1,nvarPtm+1): #One is due to empty underflow bin
@@ -30,6 +33,8 @@ def fillsignif(bkgvar,sigvar,signifvar):
             signifvar.SetBinContent(xbin, ybin, signif)
 
 
+
+            
 #Get all histograms/trees within a TFile
 def getall(d, basepath="/"):
     for key in d.GetListOfKeys():
@@ -213,6 +218,7 @@ for dm in dmass:
         #Define 2D histograms with the variable binwidth
         vartitle    = "("+reg+"-"+dm+"); p_{T}^{miss}; m_{T2}^{ll}"
         signiftitle = "s/#sqrt{s+b} "+vartitle
+        signifsqtit = "significance squared"+vartitle
         nvarbinx  = len(rangPtm)-1
         nvarbiny  = len(rangMT2)-1
         varbinx   = array('d',rangPtm)
@@ -225,12 +231,18 @@ for dm in dmass:
         
         fillsignif(bkgvar,sigvar,signifvar)
         
+        statt=array('d',7*[0.])
+        e= signifvar.Integral()
+        print e, signifvar.Sumw2()
+        #exit()
         c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1200, 900 )
 
 
         #exit()
+        signifvarsq = TH2D("signifvarsq"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
 
-        
+        signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
+        print signifvarsq
         sigvar.Draw('colz text')
         sigvar.GetYaxis().SetRange(0,400);
         sigvar.GetXaxis().SetRange(0,800);
@@ -248,6 +260,12 @@ for dm in dmass:
         signifvar.GetYaxis().SetRange(0,400);
         signifvar.GetXaxis().SetRange(0,800);
         c1.SaveAs(foldm+'/'+plot_nm+'_signif.png')
+
+
+        signifvarsq.Draw('colz text')
+        signifvarsq.GetYaxis().SetRange(0,400);
+        signifvarsq.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+'/'+plot_nm+'_signifsq.png')
 
         #exit()
         os.system("cp "+wloc+'/index.php '+foldm)
