@@ -275,100 +275,27 @@ def main():
            signifvarsq = TH2D("signifvarsq"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
            signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
            print signifvarsq.Integral()
-
-
-
-           '''
-           ptmaxvar=1.6*rangPtm[-1]
-           print ptmaxvar
-           from itertools import combinations
-
-           #Optimise binning for Ptm
-           nranPtm=(ptmaxvar-rangPtm[0])/wPtm +1
-           ptmbins=np.linspace(rangPtm[0],ptmaxvar, nranPtm)
-           print '\n'#nranPtm,rangPtm[0],ptmbins
-           nbinPtmMax=6
-           maxbinsPtm=np.zeros(nbinPtmMax)
-           significances={}
-           print maxbinsPtm
-           #exit()
-           for nbinPtm in range(1,nbinPtmMax):
-               print "i",nbinPtm
-               allbincombPtm=(combinations(ptmbins,nbinPtm+1))
-               #print "length", len(list(allbincombPtm))
-               maxsignifsq=0
-               postbinning=[]
-               for idx,binning in enumerate(allbincombPtm):
-                   # print "binning",binning, nbinPtm, varbinx, nvarbinx
-                   if idx>20: break
-                   if idx is 0: continue
-                   varbinxi= array('d',binning)
-                   bkgvari    = TH2D("bkgvari"+reg+dm,"bkg "   +vartitle, nbinPtm, varbinxi, nvarbiny, varbiny)
-
-                   sigvari    = TH2D("sigvari"+reg+dm,"signal "+vartitle, nbinPtm, varbinxi, nvarbiny, varbiny)
-                   signifvari = TH2D("signifvari"+reg+dm, signiftitle, nbinPtm, varbinxi, nvarbiny, varbiny)
-                   signifvarsqi = TH2D("signifvarsqi"+reg+dm, signiftitle, nbinPtm, varbinxi, nvarbiny, varbiny)
-
-                   fillvarbins(bkg2D,sig2D,bkgvari,sigvari)
-                   fillsignif(bkgvari,sigvari,signifvari)
-                   signifvarsqi.Multiply(signifvari,signifvari)#,signifvar)
-                   signifsq=signifvarsqi.Integral()
-                   print idx, "\t", signifsq, varbinxi
-                   if signifsq >  maxsignifsq:
-                       maxsignifsq=signifsq
-                       postbinning=[]
-                   if signifsq == maxsignifsq:
-                       postbinning.append(binning)
-                   del bkgvari, sigvari, signifvari, signifvarsqi
-
-               #ee
-               significances[str(nbinPtm)+'_bins']={'signif':maxsignifsq, 'possible_bins':postbinning}
-                   #maxbinsPtm[nbinPtm]=maxsignifsq
-           print("--- %s seconds ---" % (time.time() - start_time))
-
-           import csv
-
-           csv_nm="bestbinningPtm"
-           if idx<25: csv_nm+="_test"
-           with open(csv_nm+'.csv', mode='w') as employee_file:
-               sig_txt = csv.writer(employee_file, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-               sig_txt.writerow(['Best binning'])
-               sig_txt.writerow(['signif', 'possible binning'])
-
-               for nbin in significances:
-                   sig_txt.writerow([nbin, significances[nbin]])
-                   sig_txt.writerow(["--------------------------------"])
-                   print nbin,significances[nbin],"\n-----------------------------"
-           os.system("mv "+csv_nm+".csv binning/")
-           #exit()
-           '''
-
            draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin)
 
-           #exit()
    cpweb= 'cp -r '+folder+" "+ optim
    #os.system(cpweb)
    print cpweb    
 if __name__ == "__main__":
     main()
 
+#old way to loop over the entries to fill the asymmetric histo
+def old_variablebinning():
+    for ibinf,i in enumerate(range(0,len(binsX))):
+        #if(i<binsX[0]):continue
+        for jbinf,j in enumerate(range(0,len(binsY))):
+           #if(j<binsY[0]):continue
+           if jbinf<1 or ibinf<1: continue
+           if j>4 or i>4: continue
+           for in_i in range(binsX[i-1], binsX[i]):
+               for in_j in range(binsY[j-1],binsY[j]):
+                   print i,"in x", in_i,"\t", j,"in y", in_j
+            #print ibinf,binsX[i],jbinf, binsY[j]
+           #, bkg2D.GetBinContent(i,j)
 
-
-'''
-        #old way to loop over the entries to fill the asymmetric histo
-        for ibinf,i in enumerate(range(0,len(binsX))):
-            #if(i<binsX[0]):continue
-            for jbinf,j in enumerate(range(0,len(binsY))):
-               #if(j<binsY[0]):continue
-               if jbinf<1 or ibinf<1: continue
-               if j>4 or i>4: continue
-               for in_i in range(binsX[i-1], binsX[i]):
-                   for in_j in range(binsY[j-1],binsY[j]):
-                       print i,"in x", in_i,"\t", j,"in y", in_j
-                #print ibinf,binsX[i],jbinf, binsY[j]
-               #, bkg2D.GetBinContent(i,j)
-
-'''
 
 
