@@ -2,11 +2,13 @@ import os, sys
 from ROOT import TH1D, TH2D, TFile, TTree, TCanvas, gROOT, gStyle
 from array import array
 import numpy as np
+import time
 wloc = os.environ['WWW']
-
+start_time= time.time()
 gROOT.SetBatch(True)
 gStyle.SetPaintTextFormat("4.3f");
 gStyle.SetOptStat(0);
+
 #Fill signal and bakground for variable binwidth
 def fillvarbins(bkg2D,sig2D,bkgvar,sigvar):
     for ibin in range(1, nPtm):
@@ -19,8 +21,6 @@ def fillvarbins(bkg2D,sig2D,bkgvar,sigvar):
             sigvar.Fill(locPtm, locMT2, sig)
             #if sig>0: print locPtm, locMT2, sig
 
-def getsignifsum(e):
-    print 3
 
 #Fill significance plot for variable binning
 def fillsignif(bkgvar,sigvar,signifvar):
@@ -45,13 +45,65 @@ def getall(d, basepath="/"):
         else:
             yield basepath+kname, d.Get(kname)
 
-def addhisto(sig, bkg, isSig, nsig, count=False):
+#Add one histogram
+def addhisto(sig, bkg, isSig,histnm, nsig, count=False):
     histo=inpfile.Get(histnm)
+    #print histnm, isSig
     if(isSig is True):
         if count is True: nsig+=1
         sig.Add(histo)
     else: bkg.Add(histo)
     return nsig
+
+#Add all histograms given input file
+def addhistos(inpfile, dmass,dm, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm):
+    allhistos = getall(inpfile)
+    nsig      = 0
+    print "DM", dm
+    #For a given region and dm, add all histograms
+    for ihis, histloc in enumerate(allhistos):
+        histnm = histloc[0]
+        hsplit = histnm.split('mS')
+        isSig  = False
+        if(reg not in histnm and "comb" not in reg): continue
+        if len(hsplit) >1:
+            isSig = True
+            if "AN" in dm:
+                if dmass[dm] not in histnm: continue
+            else:
+                mass  = hsplit[1].replace('-','_').split('_')
+                mS    = int(mass[1])
+                mX    = int(mass[3])
+                dm_i  = mS-mX
+                if(mS<mSmin    or mS>mSmax  ): continue
+                if(dm_i<=dmmin or dm_i>dmmax): continue
+        if 'ptmissmt2' in histnm:
+            #print "nsig", nsig, histnm
+            nsig = addhisto(sigunrol,bkgunrol,isSig,histnm, nsig,True)
+        elif 'mt2'     in histnm: nsig = addhisto(sigMT2,bkgMT2,isSig,histnm, nsig)
+        elif 'ptmiss'  in histnm: nsig = addhisto(sigPtm,bkgPtm,isSig, histnm, nsig)
+    print "number of Mass Points:", nsig
+    return nsig
+
+#recover the 2D histogram from the unrolled 
+def make2D(sigunrol,bkgunrol, sig2D, bkg2D):
+    nbin = sigunrol.GetNbinsX()
+    x = 0
+    y = 0
+    n = 0
+    
+    for i in range(1,nbin):
+        if (i % nPtm is 1):
+            y+=1
+            x =0
+        x+=1
+        isig = sigunrol.GetBinContent(i)/nsig
+        ibkg = bkgunrol.GetBinContent(i)
+        if(isig>0): sig2D.SetBinContent(x,y,isig)
+        if(ibkg>=0):
+            bkg2D.SetBinContent(x,y, ibkg)
+            #if(x<10 and y<5):print x, y, ibkg
+        if(ibkg+isig>0 and isig>=0): signif2D.SetBinContent(x,y,isig/np.sqrt(ibkg+isig))
 
 #Main area
 yearfol='2016'
@@ -68,11 +120,11 @@ hminMT2 =    0
 hmaxMT2 = 1000
 hminPtm =    0
 hmaxPtm = 2000
-nMT2 =  100
-nPtm =  100
-
+nMT2 = 100
+nPtm = 100
+wPtm = (hmaxPtm-hminPtm)/nPtm
 regions = ["combined", "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
-dmass   = {"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
+dmass   = {"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
 
 for dm in dmass:
     print "MASS:\t", dm
@@ -81,7 +133,7 @@ for dm in dmass:
         if "AN" in dm:
             dmfol = dmass[dm]
             print "Get AN masspoints", dmass[dm]
-        else:
+        else
             dmmin = dmass[dm][0]
             dmmax = dmass[dm][1]
         
@@ -105,53 +157,13 @@ for dm in dmass:
         signif2D.SetTitle( "m_{T2ll} vs p_{T}^{miss} ("+reg+'-'+dm+")")
         signif2D.SetYTitle("m_{T2ll} [GeV]")
         signif2D.SetXTitle("p_{T}^{miss} [GeV]")
-        allhistos = getall(inpfile)
-        nsig      = 0
-
-        #For a given region and dm, add all histograms
-        for ihis, histloc in enumerate(allhistos):
-            histnm = histloc[0]
-            hsplit = histnm.split('mS')
-            isSig  = False
-            if(reg not in histnm and "comb" not in reg): continue
-            if len(hsplit) >1:
-                isSig = True
-                if "AN" in dm:
-                    if dmass[dm] not in histnm: continue
-                else:
-                    mass  = hsplit[1].replace('-','_').split('_')
-                    mS    = int(mass[1])
-                    mX    = int(mass[3])
-                    dm_i  = mS-mX
-                    if(mS<mSmin    or mS>mSmax  ): continue
-                    if(dm_i<=dmmin or dm_i>dmmax): continue
-    
-            if 'ptmissmt2' in histnm: nsig = addhisto(sigunrol,bkgunrol,isSig, nsig,True)
-            elif 'mt2'     in histnm: nsig = addhisto(sigMT2,bkgMT2,isSig, nsig)
-            elif 'ptmiss'  in histnm: nsig = addhisto(sigPtm,bkgPtm,isSig, nsig)
-        print "number of Mass Points:", nsig
-        
-        #recover the 2D histogram from the unrolled 
-        nbin = sigunrol.GetNbinsX()
-        x = 0
-        y = 0
-        n = 0
-        
-        for i in range(1,nbin):
-            if (i % nPtm is 1):
-                y+=1
-                x =0
-            x+=1
-            isig = sigunrol.GetBinContent(i)/nsig
-            ibkg = bkgunrol.GetBinContent(i)
-            if(isig>0): sig2D.SetBinContent(x,y,isig)
-            if(ibkg>=0):
-                bkg2D.SetBinContent(x,y, ibkg)
-                #if(x<10 and y<5):print x, y, ibkg
-            if(ibkg+isig>0 and isig>=0): signif2D.SetBinContent(x,y,isig/np.sqrt(ibkg+isig))
-
 
         
+
+        nsig = addhistos(inpfile, dmass,dm, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm)
+        make2D(sigunrol,bkgunrol, sig2D, bkg2D)
+
+
         #Make profiles (currently unused)
         bkgprofX = bkg2D.ProfileX()
         bkgprofY = bkg2D.ProfileY()
@@ -204,17 +216,6 @@ for dm in dmass:
         nvarPtm=len(rangPtm)
 
 
-
-        #Get for variable binning add in quadrature 
-        #for imt2 in range():
-        #    for jbin in range(0,nMT2):
-
-
-        #exit()
-
-
-
-        #exit()
         #Define 2D histograms with the variable binwidth
         vartitle    = "("+reg+"-"+dm+"); p_{T}^{miss}; m_{T2}^{ll}"
         signiftitle = "s/#sqrt{s+b} "+vartitle
@@ -234,15 +235,18 @@ for dm in dmass:
         statt=array('d',7*[0.])
         e= signifvar.Integral()
         print e, signifvar.Sumw2()
-        #exit()
+        signifvarsq = TH2D("signifvarsq"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
+        signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
+        print signifvarsq.Integral()
+
+
+
+        
         c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1200, 900 )
 
 
         #exit()
-        signifvarsq = TH2D("signifvarsq"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
-
-        signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
-        print signifvarsq
+        
         sigvar.Draw('colz text')
         sigvar.GetYaxis().SetRange(0,400);
         sigvar.GetXaxis().SetRange(0,800);
