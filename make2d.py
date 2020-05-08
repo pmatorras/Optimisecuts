@@ -47,14 +47,19 @@ def fillvarbins(bkg2D,sig2D,bkgvar,sigvar):
 
 #Fill significance plot for variable binning
 def fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2):
-    for xbin in range (1,nvarPtm+1): #One is due to empty underflow bin
-        for ybin in range(1,nvarMT2+1):
+    #print "var", nvarPtm
+    for xbin in range (0,nvarPtm+2): #0 is underflow, 2 overflow + range
+        #print "xbin", xbin
+        for ybin in range(0,nvarMT2+2):
             isig = sigvar.GetBinContent(xbin,ybin)
             ibkg = bkgvar.GetBinContent(xbin,ybin)
-            if(isig+ibkg>0): signif = isig/np.sqrt(ibkg+isig)
+            if(isig+ibkg>0):
+                signif = isig/np.sqrt(ibkg+isig)
+                #print xbin, ybin, round(isig,3) #round(signif,3)
+                
             else: signif = 0
             signifvar.SetBinContent(xbin, ybin, signif)
-
+            
 
 
             
@@ -82,7 +87,6 @@ def addhisto(sig, bkg, isSig,histnm, nsig, count=False):
 def addhistos(inpfile, dmass,dm, dmmin,dmmax, reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm):
     allhistos = getall(inpfile)
     nsig      = 0
-    print "DM", dm
     #For a given region and dm, add all histograms
     for ihis, histloc in enumerate(allhistos):
         histnm = histloc[0]
@@ -108,8 +112,8 @@ def addhistos(inpfile, dmass,dm, dmmin,dmmax, reg, sigunrol,bkgunrol, sigMT2,bkg
     print "number of Mass Points:", nsig
     return nsig
 
+#Define necessary histograms
 def define_histos(reg,dm):
-    #Define necessary histograms
     print "REGION:", reg
     sigunrol = TH1D("sigunrol"+reg+dm, reg, 10000, 0, 10000)
     bkgunrol = TH1D("bkgunrol"+reg+dm, reg, 10000, 0, 10000)
@@ -148,10 +152,10 @@ def make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D,nsig):
             #if(x<10 and y<5):print x, y, ibkg
         if(ibkg+isig>0 and isig>=0): signif2D.SetBinContent(x,y,isig/np.sqrt(ibkg+isig))
 
-
+#Draw histograms
 def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin):
     c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1200, 900 )
-
+    os.system('mkdir -p '+foldm)
     sigvar.Draw('colz text')
     sigvar.GetYaxis().SetRange(0,400);
     sigvar.GetXaxis().SetRange(0,800);
@@ -176,7 +180,6 @@ def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin):
     signifvarsq.GetXaxis().SetRange(0,800);
     c1.SaveAs(foldm+'/'+plot_nm+'_signifsq.png')
 
-    #exit()
     os.system("cp "+wloc+'/index.php '+foldm)
 
 def main():
