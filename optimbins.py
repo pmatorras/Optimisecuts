@@ -31,8 +31,10 @@ dmass   = {"dm_1to200": [1,200]}
 #{"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
 
 
-binOriPtm = [140, 200, 300] #temporary way to assimilate to make2d.py
-binOriMT2 = [   0,  20,  40,  60,  80, 100, 120]
+binOriPtm = [160.0, 220.0, 280.0, 380.0]
+#[140, 200, 300] #temporary way to assimilate to make2d.py
+binOriMT2 = [80,100,120]
+#[   0,  20,  40,  60,  80, 100, 120]
 nvarMT2 = len(binOriMT2)
 nvarPtm = len(binOriPtm)
 maxvarPtm = 400 #1.6*rangPtm[-1]
@@ -43,7 +45,7 @@ vbinPtm  = array('d',binOriPtm)
 vbinMT2  = array('d',binOriMT2)
 print "MT2",nbinMT2
 
-def optimBins(varOptim):
+def optimBins(varOptim, vartitle):
     global nbinPtm, nbinMT2, vbinPtm, vbinMT2
     #Optimise binning for Ptm
     nbinMax = 6
@@ -51,18 +53,22 @@ def optimBins(varOptim):
     draw    = True
     isPtm   = False
     isMT2   = False
+    nhistos = 0
     if "Ptm" in varOptim:
         nbinMax = 6
         maxvar  = maxvarPtm
         binOri  = binOriPtm
         wOri    = wPtm
         isPtm   = True
+        hnm     = 'Ptm'
     elif "MT2" in varOptim:
-        nbinMax = 10
+        nbinMax = 6
         maxvar  = maxvarMT2
         binOri  = binOriMT2
         wOri    = wMT2
         isMT2   = True
+        hnm     = "MT2"
+    vartitle+=hnm
     print "max Ptmiss", maxvar, wOri
     nran=(maxvar-binOri[0])/wOri +1
     vbins=np.linspace(binOri[0],maxvar, nran)
@@ -73,13 +79,13 @@ def optimBins(varOptim):
     for nbin in range(1,nbinMax):
         if  (isPtm): nbinPtm=nbin
         elif(isMT2): nbinMT2=nbin
-        if nbinPtm is not 4: continue
+        #if nbin is not 4: continue
         allbincombPtm = (combinations(vbins,nbin+1))
         maxsignif=0
         postbinning=[]
         for idx,binning in enumerate(allbincombPtm):
-            print "idx",idx
-            if idx>15: break
+            #if binning[0]>20: continue
+            #if idx>15:break
             #if idx is not 2: continue
             '''
             if idx is 0:
@@ -94,11 +100,10 @@ def optimBins(varOptim):
             varbini= array('d',binning)
             if  (isPtm): vbinPtm=varbini
             elif(isMT2): vbinMT2=varbini
-            print "inside", nbinPtm, nbinMT2
-            bkgvari      = TH2D("bkgvari"+reg+dm,"bkg "   +vartitle, nbinPtm, vbinPtm, nbinMT2, vbinMT2)
-            sigvari      = TH2D("sigvari"+reg+dm,"signal "+vartitle, nbinPtm, vbinPtm, nbinMT2, vbinMT2)
-            signifvari   = TH2D("signifvari"+reg+dm, signiftitle   , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
-            signifvarsqi = TH2D("signifvarsqi"+reg+dm, signiftitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
+            bkgvari      = TH2D("bkgvar"+hnm+reg+dm,"bkg "   +vartitle, nbinPtm, vbinPtm, nbinMT2, vbinMT2)
+            sigvari      = TH2D("sigvar"+hnm+reg+dm,"signal "+vartitle, nbinPtm, vbinPtm, nbinMT2, vbinMT2)
+            signifvari   = TH2D("signifvar"+hnm+reg+dm, signiftitle   , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
+            signifvarsqi = TH2D("signifvarsq"+hnm+reg+dm, signiftitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
             fillvarbins(bkg2D,sig2D,bkgvari,sigvari)
             fillsignif(bkgvari,sigvari,signifvari,nbinPtm,nvarMT2)
             signifvarsqi.Multiply(signifvari,signifvari)#,signifvar)                                                           
@@ -108,22 +113,26 @@ def optimBins(varOptim):
             if signif >  maxsignif:
                 maxsignif=signif
                 postbinning=[]
-            if signif > 0.999*maxsignif:
+                print "new max"
+            if signif > 0.995*maxsignif:
                 postbinning.append(binning)
-            if idx<3 or signif>0.999*maxsignif :print nbinPtm,idx, "\t", signif, varbini
-
+            if idx<3 or signif>0.995*maxsignif :
+                sigstr=str(round(signif,5))
+                printoutput= str(nbin)+' '+str(idx)+ "\t"+ sigstr+'\t '+str(varbini)
+                os.system('echo "'+printoutput+ '">>output'+varOptim+".log")
+                print printoutput
             foldm="test"
             varbin='test'+str(idx)
             if idx<4 and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, varbin)
             del bkgvari, sigvari, signifvari, signifvarsqi
-
-        significances[str(nbinPtm)+'_bins']={'signif':maxsignif, 'possible_bins':postbinning}
+        nhistos=idx
+        significances[str(nbin)+'_bins']={'signif':maxsignif, 'possible_bins':postbinning}
         print("--- %s seconds ---" % (time.time() - start_time))
-    return idx, significances
+    return nhistos, significances
 
 def write_bestbin(suffix=''):
     csv_fol="binning/"
-    csv_nm="bestbinningPtm"+suffix
+    csv_nm="bestbinning"+suffix
     if idx<25: csv_nm+="_test"
     with open(csv_nm+'.csv', mode='w') as employee_file:
         sig_txt = csv.writer(employee_file, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -183,8 +192,8 @@ for dm in dmass:
 
         nsig = addhistos(inpfile, dmass,dm,dmmin,dmmax,reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm)
         make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D, nsig)
-        varoptim  = 'Ptm'
+        varoptim  = 'MT2'
         print "before function", nbinPtm, nbinMT2
-        idx, significances= optimBins(varoptim)
-        write_bestbin()
+        idx, significances= optimBins(varoptim, vartitle)
+        write_bestbin(varoptim)
         exit()
