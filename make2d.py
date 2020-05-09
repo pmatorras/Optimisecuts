@@ -1,4 +1,4 @@
-import os, sys
+import os, sys,optparse
 from ROOT import TH1D, TH2D, TFile, TTree, TCanvas, gROOT, gStyle
 from array import array
 import numpy as np
@@ -17,17 +17,34 @@ nPtm  = 100
 wPtm  = (hmaxPtm-hminPtm)/nPtm
 mSmin = 400
 mSmax = 700
-#Main area
-yearfol='2016'
-yearfol='2016-2017-2018'
-if '-' in yearfol:
-    year=''
+usage = 'usage: %prog [options]'
+parser = optparse.OptionParser(usage)
+parser.add_option('--year'   , dest='year'   , help='which year to open', default='run2')
+parser.add_option('--var' , dest='var' , help='var to optimise', default='MT2')
+parser.add_option('--AN'  , dest='AN' , help='AN binning', default=False, action='store_true')
+parser.add_option('--all'   , dest='all'   , help='run only few plots', default=False, action='store_true')
+(opt, args) = parser.parse_args()
+
+if 'all' in opt.year:
+    year='run2'
+elif '0' in opt.year:
+    year='2016'
+elif '1' in opt.year:
+    year='2017'
+elif '2' in opt.year:
+    year='2018'
 else:
-    year=yearfol+'_'
-yearfol=yearfol+'/'
-inpfile = TFile ('../rootfiles/plots_HighPtMissOptimisationRegion_'+year+'SM-T2tt_mS-400to700.root', "READ")
+    year=opt.year
+
+inpfnm='../rootfiles/plots_HighPtMissOptimisationRegion_'+year+'\
+_SM-T2tt_mS-400to700.root'
+#print "INPUT FILE", inpfnm
+
+
+#Main area
+inpfile = TFile (inpfnm, "READ")
 optim   = wloc+"/susy/optimisation/"
-folder  ="../Histograms/""significance/"+yearfol
+folder  ="../Histograms/""significance/"+year
 regions = ["combined", "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
 dmass   = {"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
    
@@ -76,7 +93,7 @@ def getall(d, basepath="/"):
 #Add one histogram
 def addhisto(sig, bkg, isSig,histnm, nsig, count=False):
     histo=inpfile.Get(histnm)
-    #print histnm, isSig
+    #print "HISTO-->", histnm, isSig
     if(isSig is True):
         if count is True: nsig+=1
         sig.Add(histo)

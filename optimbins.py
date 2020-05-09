@@ -1,23 +1,48 @@
-import os, sys, time,csv
+import os, sys, time,csv, optparse
 import numpy as np
 from ROOT      import TH1D, TH2D, TFile, TTree, TCanvas, gROOT, gStyle
 from itertools import combinations
 from array     import array
 from make2d    import *
-        
-wloc = os.environ['WWW']
-start_time= time.time()
-#Main area                                                                                                                         
-yearfol='2016'
-yearfol='2016-2017-2018'
-if '-' in yearfol:
-    year=''
+wloc       = os.environ['WWW']
+start_time = time.time()
+
+
+#Optional parameters                                                                                       
+usage = 'usage: %prog [options]'
+parser = optparse.OptionParser(usage)
+parser.add_option('--year', dest='year', help='which year to open', default='run2')
+parser.add_option('--var' , dest='var' , help='var to optimise', default='MT2')
+parser.add_option('--AN'  , dest='AN' , help='AN binning', default=False, action='store_true')
+parser.add_option('--all' , dest='all' , help='run only few plots', default=False, action='store_true')
+(opt, args) = parser.parse_args()
+
+if 'all' in opt.year:
+    year = 'run2'
+elif '0' in opt.year:
+    year = '2016'
+elif '1' in opt.year:
+    year = '2017'
+elif '2' in opt.year:
+    year = '2018'
 else:
-    year=yearfol+'_'
-yearfol=yearfol+'/'
-inpfile = TFile ('../rootfiles/plots_HighPtMissOptimisationRegion_'+year+'SM-T2tt_mS-400to700.root', "READ")
+    year = opt.year
+
+varOptim=opt.var
+print "--------------------------------------------------"
+if opt.var not in ['Ptm','MT2']:
+    print "wrong variable", opt.var
+    exit()
+
+inpfnm = '../rootfiles/plots_HighPtMissOptimisationRegion_'+year+'_SM-T2tt_mS-400to700.root'
+print "VARIABLE TO OPTIMISE:\t", varOptim
+print "MC FOR YEAR:\t\t", year
+
+#Main area
+Test=not(opt.all)
+inpfile = TFile (inpfnm, "READ")
 optim   = wloc+"/susy/optimisation/"
-folder  ="../Histograms/""significance/"+yearfol
+folder  = "../Histograms/significance/"+year
 hminMT2 =    0
 hmaxMT2 = 1000
 hminPtm =    0
@@ -29,12 +54,17 @@ wMT2 = (hmaxMT2-hminMT2)/nMT2
 regions = ["combined"]#, "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
 dmass   = {"dm_1to200": [1,200]}
 #{"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
-
-
 binOriPtm = [160.0, 220.0, 280.0, 380.0]
-#[140, 200, 300] #temporary way to assimilate to make2d.py
 binOriMT2 = [80,100,120]
-#[   0,  20,  40,  60,  80, 100, 120]
+str_AN = ''
+if opt.AN is True:
+    str_AN = '_ANbin'
+    print "USING AN BINNING"
+    binOriPtm = [140, 200, 300]
+    binOriMT2 = [  0,  20,  40,  60,  80, 100, 120]
+print "--------------------------------------------------"
+
+
 nvarMT2 = len(binOriMT2)
 nvarPtm = len(binOriPtm)
 maxvarPtm = 400 #1.6*rangPtm[-1]
@@ -45,31 +75,54 @@ vbinPtm  = array('d',binOriPtm)
 vbinMT2  = array('d',binOriMT2)
 print "MT2",nbinMT2
 
+#Draw test distributions
+def testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm):
+    if idx is 0 :
+        if isMT2:
+            binning=array('d',[90.0, 100.0, 110.0, 140.0, 160.0])
+            nbinMT2=4
+        elif isPtm:
+            nbinPtm=2
+            binning=array('d',[140.,200.0,300.0])   
+    if idx is 1 :
+        if isMT2:
+            binning=array('d',[80.,100.,120.])#[140.,200.0,300.0])
+            nbinMT2=2
+        elif isPtm:
+            binning=array('d',[100.0,160.0,220.0,280.0, 380.0])
+            nbinPtm=4
+    if idx is 2:
+        if isMT2:
+            emptySlot=True
+        if isPtm:
+            nbinPtm=7
+            binning=array('d',[100.0,180.0,240.0,320.0,360.,400.,440., 460.0])
+    return nbinMT2,nbinPtm,binning
+
+#Optimise binning for Ptm
 def optimBins(varOptim, vartitle):
     global nbinPtm, nbinMT2, vbinPtm, vbinMT2
-    #Optimise binning for Ptm
     nbinMax = 6
     maxPtm  = False
     draw    = True
     isPtm   = False
     isMT2   = False
     nhistos = 0
+    hnm     = varOptim
     if "Ptm" in varOptim:
         nbinMax = 6
         maxvar  = maxvarPtm
         binOri  = binOriPtm
         wOri    = wPtm
         isPtm   = True
-        hnm     = 'Ptm'
     elif "MT2" in varOptim:
         nbinMax = 6
         maxvar  = maxvarMT2
         binOri  = binOriMT2
         wOri    = wMT2
         isMT2   = True
-        hnm     = "MT2"
     vartitle+=hnm
-    print "max Ptmiss", maxvar, wOri
+    print "max possible bin: ", maxvar, wOri
     nran=(maxvar-binOri[0])/wOri +1
     vbins=np.linspace(binOri[0],maxvar, nran)
     print '\n'#nranPtm,rangPtm[0],ptmbins
@@ -79,24 +132,17 @@ def optimBins(varOptim, vartitle):
     for nbin in range(1,nbinMax):
         if  (isPtm): nbinPtm=nbin
         elif(isMT2): nbinMT2=nbin
-        #if nbin is not 4: continue
+        if Test is True and nbin is not 4: continue
         allbincombPtm = (combinations(vbins,nbin+1))
         maxsignif=0
         postbinning=[]
         for idx,binning in enumerate(allbincombPtm):
             #if binning[0]>20: continue
-            #if idx>15:break
-            #if idx is not 2: continue
-            '''
-            if idx is 0:
-                #nbinPtm=
-                nbinPtm=2
-                binning=array('d',[140.,200.0,300.0])
-            if idx is 1: binning=array('d',[100.0,160.0,220.0,280.0, 380.0])
-            if idx is 2:
-                nbinPtm=7
-                binning=array('d',[100.0,180.0,240.0,320.0,360.,400.,440., 460.0])
-            '''
+                
+            if Test is True:
+                if idx>1:break
+                nbinMT2,nbinPtm,binning =testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm)
+
             varbini= array('d',binning)
             if  (isPtm): vbinPtm=varbini
             elif(isMT2): vbinMT2=varbini
@@ -106,27 +152,31 @@ def optimBins(varOptim, vartitle):
             signifvarsqi = TH2D("signifvarsq"+hnm+reg+dm, signiftitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
             fillvarbins(bkg2D,sig2D,bkgvari,sigvari)
             fillsignif(bkgvari,sigvari,signifvari,nbinPtm,nvarMT2)
-            signifvarsqi.Multiply(signifvari,signifvari)#,signifvar)                                                           
-            signifsq=signifvarsqi.Integral(0,nbinPtm+1,0,nbinMT2+1)
-            signif=np.sqrt(signifsq)
-
+            signifvarsqi.Multiply(signifvari,signifvari)#,signifvar)
+            
+            signifsq = signifvarsqi.Integral(0,nbinPtm+1,0,nbinMT2+1)
+            signif   = np.sqrt(signifsq)
+            if signif > 1.002*maxsignif:  postbinning=[]
             if signif >  maxsignif:
                 maxsignif=signif
-                postbinning=[]
                 print "new max"
-            if signif > 0.995*maxsignif:
+            if signif > 0.998*maxsignif:
                 postbinning.append(binning)
-            if idx<3 or signif>0.995*maxsignif :
-                sigstr=str(round(signif,5))
-                printoutput= str(nbin)+' '+str(idx)+ "\t"+ sigstr+'\t '+str(varbini)
+            if idx<3 or signif>0.998*maxsignif :
+                sigstr = str(round(signif,5))
+                printoutput = str(nbin)+' '+str(idx)+ "\t"+ sigstr+'\t '+str(binning)
                 os.system('echo "'+printoutput+ '">>output'+varOptim+".log")
                 print printoutput
-            foldm="test"
-            varbin='test'+str(idx)
+            foldm  = "test"
+            varbin = 'test'+str(idx)
             if idx<4 and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, varbin)
             del bkgvari, sigvari, signifvari, signifvarsqi
         nhistos=idx
-        significances[str(nbin)+'_bins']={'signif':maxsignif, 'possible_bins':postbinning}
+        if isPtm: 
+            significances[str(nbin)+'_bins']={'signif':round(maxsignif,4), 'possible_Ptmiss_bins':postbinning}
+        elif isMT2:
+            significances[str(nbin)+'_bins']={'signif':round(maxsignif,4), 'possible_MT2_bins':postbinning}
+            
         print("--- %s seconds ---" % (time.time() - start_time))
     return nhistos, significances
 
@@ -134,11 +184,18 @@ def write_bestbin(suffix=''):
     csv_fol="binning/"
     csv_nm="bestbinning"+suffix
     if idx<25: csv_nm+="_test"
+    binline=''
+    str_AN=''
+    if "AN"  in suffix: str_AN='\t(AN binning)'
+    if "Ptm" in suffix: binline="MT2 binning:\t"+str(binOriMT2)
+    elif "MT2" in suffix: binline="Ptmiss binning:\t"+str(binOriPtm)
     with open(csv_nm+'.csv', mode='w') as employee_file:
         sig_txt = csv.writer(employee_file, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-        sig_txt.writerow(['Best binning'])
-        sig_txt.writerow(['signif', 'possible binning', '(nbins not including overflow)'])
+        sig_txt.writerow(["----------------------------------------------"])
+        sig_txt.writerow(['BEST BINNING to maximise significance'])
+        sig_txt.writerow([binline+str_AN])
+        sig_txt.writerow(['n bins', 'signif.', 'possible binning (nbins not including overflow)'])
+        sig_txt.writerow(["----------------------------------------------"])
 
         for nbin in sorted(significances.iterkeys()):
             sig_txt.writerow([nbin, significances[nbin]])
@@ -151,6 +208,11 @@ def write_bestbin(suffix=''):
         
 
 
+
+
+    
+
+#Loop over binning
 for dm in dmass:
     print "MASS:\t", dm
     for reg in regions:
@@ -192,8 +254,6 @@ for dm in dmass:
 
         nsig = addhistos(inpfile, dmass,dm,dmmin,dmmax,reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm)
         make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D, nsig)
-        varoptim  = 'MT2'
-        print "before function", nbinPtm, nbinMT2
-        idx, significances= optimBins(varoptim, vartitle)
-        write_bestbin(varoptim)
+        idx, significances= optimBins(varOptim, vartitle)
+        write_bestbin(varOptim+str_AN)
         exit()
