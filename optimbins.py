@@ -4,64 +4,27 @@ from ROOT      import TH1D, TH2D, TFile, TTree, TCanvas, gROOT, gStyle
 from itertools import combinations
 from array     import array
 from make2d    import *
-wloc       = os.environ['WWW']
+from getparams import *
 start_time = time.time()
 
 
-#Optional parameters                                                                                       
-usage = 'usage: %prog [options]'
-parser = optparse.OptionParser(usage)
-parser.add_option('--year', dest='year', help='which year to open', default='run2')
-parser.add_option('--var' , dest='var' , help='var to optimise', default='MT2')
-parser.add_option('--AN'  , dest='AN' , help='AN binning', default=False, action='store_true')
-parser.add_option('--all' , dest='all' , help='run only few plots', default=False, action='store_true')
-(opt, args) = parser.parse_args()
-
-if 'all' in opt.year:
-    year = 'run2'
-elif '0' in opt.year:
-    year = '2016'
-elif '1' in opt.year:
-    year = '2017'
-elif '2' in opt.year:
-    year = '2018'
-else:
-    year = opt.year
-
-varOptim=opt.var
-print "--------------------------------------------------"
-if opt.var not in ['Ptm','MT2']:
-    print "wrong variable", opt.var
-    exit()
-
-inpfnm = '../rootfiles/plots_HighPtMissOptimisationRegion_'+year+'_SM-T2tt_mS-400to700.root'
-print "VARIABLE TO OPTIMISE:\t", varOptim
-print "MC FOR YEAR:\t\t", year
-
-#Main area
-Test=not(opt.all)
-inpfile = TFile (inpfnm, "READ")
-optim   = wloc+"/susy/optimisation/"
-folder  = "../Histograms/significance/"+year
-hminMT2 =    0
-hmaxMT2 = 1000
-hminPtm =    0
-hmaxPtm = 2000
-nMT2 = 100
-nPtm = 100
-wPtm = (hmaxPtm-hminPtm)/nPtm
-wMT2 = (hmaxMT2-hminMT2)/nMT2
 regions = ["combined"]#, "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
 dmass   = {"dm_1to200": [1,200]}
 #{"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
 binOriPtm = [160.0, 220.0, 280.0, 380.0]
 binOriMT2 = [80,100,120]
+binANPtm = [140, 200, 300]
+binANMT2 = [ 80, 100, 120]
+
+print "--------------------------------------------------"
+print "VARIABLE TO OPTIMISE:\t", varOptim
+print "MC FOR YEAR:\t\t", year
 str_AN = ''
 if opt.AN is True:
     str_AN = '_ANbin'
     print "USING AN BINNING"
-    binOriPtm = [140, 200, 300]
-    binOriMT2 = [  0,  20,  40,  60,  80, 100, 120]
+    binOriPtm=binANPtm
+    binOriMT2=binANMT2
 print "--------------------------------------------------"
 
 
@@ -79,15 +42,15 @@ print "MT2",nbinMT2
 def testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm):
     if idx is 0 :
         if isMT2:
-            binning=array('d',[90.0, 100.0, 110.0, 140.0, 160.0])
-            nbinMT2=4
+            binning=array('d',binANMT2)
+            nbinMT2=len(binANMT2)-1
         elif isPtm:
-            nbinPtm=2
-            binning=array('d',[140.,200.0,300.0])   
+            binning=array('d',binANPtm)
+            nbinPtm=len(binANPtm)-1
     if idx is 1 :
         if isMT2:
-            binning=array('d',[80.,100.,120.])#[140.,200.0,300.0])
-            nbinMT2=2
+            binning = array('d',[90.,100.,160.])
+            nbinMT2 = 2
         elif isPtm:
             binning=array('d',[100.0,160.0,220.0,280.0, 380.0])
             nbinPtm=4
@@ -156,20 +119,20 @@ def optimBins(varOptim, vartitle):
             
             signifsq = signifvarsqi.Integral(0,nbinPtm+1,0,nbinMT2+1)
             signif   = np.sqrt(signifsq)
-            if signif > 1.002*maxsignif:  postbinning=[]
+            if signif > 1.001*maxsignif:  postbinning=[]
             if signif >  maxsignif:
                 maxsignif=signif
-                print "new max"
-            if signif > 0.998*maxsignif:
+                print "NEW MAX"
+            if signif > 0.999*maxsignif:
                 postbinning.append(binning)
-            if idx<3 or signif>0.998*maxsignif :
+            if idx<3 or signif>0.999*maxsignif :
                 sigstr = str(round(signif,5))
                 printoutput = str(nbin)+' '+str(idx)+ "\t"+ sigstr+'\t '+str(binning)
                 os.system('echo "'+printoutput+ '">>output'+varOptim+".log")
                 print printoutput
             foldm  = "test"
             varbin = 'test'+str(idx)
-            if idx<4 and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, varbin)
+            if Test is True and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, varbin)
             del bkgvari, sigvari, signifvari, signifvarsqi
         nhistos=idx
         if isPtm: 
