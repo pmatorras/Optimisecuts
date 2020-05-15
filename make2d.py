@@ -9,13 +9,38 @@ gROOT.SetBatch(True)
 gStyle.SetPaintTextFormat("4.3f");
 gStyle.SetOptStat(0);
 
+dorelerr=True
+relstr='/'
+optMT2= True #False
+optPtm= True
+rangMT2 = [   0,  20,  40,  60,  80, 100, 120]
+rangPtm = [ 100, 140, 200, 300]    
+if opt.AN is True:
+    varbin='ANbin'
+else:
+    varbin='varbin'
+    if optMT2 is True:
+        varbin+='_MT2'
+        rangMT2 = [   0,  20,  40,  60,  80, 100, 160]
+    if optPtm is True:
+        varbin+='_Ptm'
+        rangPtm = [ 100, 160, 220,280, 380]
+    
+print opt.AN
+
+
 #Main area
 regions = ["combined", "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
-dmass   = {"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
+if dorelerr is True:
+    relstr='_errors/'
+    dmass ={"MP-500_413": "mS-500_mX-413","MP-500_400": "mS-500_mX-400","MP-500_375": "mS-500_mX-375","MP-500_375": "mS-500_mX-375","MP-500_350": "mS-500_mX-350","MP-500_325": "mS-500_mX-325", "dm_1to200": [1,200]} #till 325
+    
+else:
+    dmass   = {"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
    
 
 #Fill signal and bakground for variable binwidth
-def fillvarbins(bkg2D,sig2D,bkgvar,sigvar):
+def fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr=False, h_sigerr=None):
     for ibin in range(1, nPtm):
         for jbin in range(1, nMT2):
             bkg = bkg2D.GetBinContent(ibin, jbin)
@@ -24,6 +49,11 @@ def fillvarbins(bkg2D,sig2D,bkgvar,sigvar):
             locPtm = (ibin-0.5)*(hmaxPtm-hminPtm)/nPtm
             bkgvar.Fill(locPtm, locMT2, bkg)
             sigvar.Fill(locPtm, locMT2, sig)
+            if dorelerr is True:
+                sigerr= sig2D.GetBinError(ibin,jbin)
+                if(sig>0):
+                    #print locMT2, locPtm, "\t",sigerr/sig
+                    h_sigerr.Fill(locPtm,locMT2,sigerr)
             #if sig>0: print locPtm, locMT2, sig
 
 
@@ -77,7 +107,7 @@ def addhistos(inpfile, dmass,dm, dmmin,dmmax, reg, sigunrol,bkgunrol, sigMT2,bkg
         if(reg not in histnm and "comb" not in reg): continue
         if len(hsplit) >1:
             isSig = True
-            if "AN" in dm:
+            if "MP" in dm:
                 if dmass[dm] not in histnm: continue
             else:
                 mass  = hsplit[1].replace('-','_').split('_')
@@ -134,137 +164,140 @@ def make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D,nsig):
             #if(x<10 and y<5):print x, y, ibkg
         if(ibkg+isig>0 and isig>=0): signif2D.SetBinContent(x,y,isig/np.sqrt(ibkg+isig))
 
+#Variable binning if want to reproduce AN binning
+def varbinfromprof():
+    totWPtm = bkgPtm.GetSumOfWeights()
+    totWMT2 = bkgMT2.GetSumOfWeights()
+    wsumMT2 =   0
+    wYmax   = 500
+    wsumPtm =   0
+    binsMT2 = [0]
+    rangMT2 = [0]
+    binsPtm = [5]
+    rangPtm = [100]
+    wmaxPtm = 0.05*totWPtm
+    wmaxMT2 = 0.005*totWMT2#0.01
+
+    print "tot2\t", int(totWPtm), '\t',int(totWMT2)
+    for i in range(1,99):
+        wbkgMT2 = bkgMT2.GetBinContent(i)
+        wbkgPtm = bkgPtm.GetBinContent(i)
+
+        if(wbkgPtm>0): wsumPtm+=wbkgPtm
+        if(wbkgMT2>0): wsumMT2+=wbkgMT2
+        if wsumPtm>wmaxPtm:
+            wsumPtm = 0
+            locPtm  = i*(hmaxPtm-hminPtm)/nPtm
+            binsPtm.append(i)
+            rangPtm.append(locPtm)
+            print "Y:",locPtm, "\tnew bin", i
+        if wsumMT2>wmaxMT2:
+            wsumMT2 = 0
+            locMT2  = i*(hmaxMT2-hminMT2)/nMT2
+            binsMT2.append(i)
+            rangMT2.append(locMT2)
+            print "X:",locMT2, "\tnew bin"
+    return rangPtm, rangMT2
+
+
 #Draw histograms
-def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin):
+def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, drawerr=False, sigerr=None,sigrelerr=None):
     c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1200, 900 )
     os.system('mkdir -p '+foldm)
-    sigvar.Draw('colz text')
-    sigvar.GetYaxis().SetRange(0,400);
-    sigvar.GetXaxis().SetRange(0,800);
     plot_nm=varbin+"-PtmissvsMT2"#+reg+'-'+dm+'.png'
-    c1.SaveAs(foldm+"/"+plot_nm+'_signal.png')
+
+    if drawerr is False:
+        sigvar.Draw('colz text')
+        sigvar.GetYaxis().SetRange(0,400);
+        sigvar.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+"/"+plot_nm+'_signal.png')
 
 
-    bkgvar.Draw('colz text')
-    bkgvar.GetYaxis().SetRange(0,400);
-    bkgvar.GetXaxis().SetRange(0,800);
-    c1.SaveAs(foldm+"/"+plot_nm+'_bkg.png')
+        bkgvar.Draw('colz text')
+        bkgvar.GetYaxis().SetRange(0,400);
+        bkgvar.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+"/"+plot_nm+'_bkg.png')
 
 
-    signifvar.Draw('colz text')
-    signifvar.GetYaxis().SetRange(0,400);
-    signifvar.GetXaxis().SetRange(0,800);
-    c1.SaveAs(foldm+'/'+plot_nm+'_signif.png')
+        signifvar.Draw('colz text')
+        signifvar.GetYaxis().SetRange(0,400);
+        signifvar.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+'/'+plot_nm+'_signif.png')
 
 
-    signifvarsq.Draw('colz text')
-    signifvarsq.GetYaxis().SetRange(0,400);
-    signifvarsq.GetXaxis().SetRange(0,800);
-    c1.SaveAs(foldm+'/'+plot_nm+'_signifsq.png')
+        signifvarsq.Draw('colz text')
+        signifvarsq.GetYaxis().SetRange(0,400);
+        signifvarsq.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+'/'+plot_nm+'_signifsq.png')
+    elif drawerr is True:
+        print "relative error plot"
+        sigerr.Draw('colz text')
+        sigerr.GetYaxis().SetRange(0,400);
+        sigerr.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+'/'+plot_nm+'_sigerr.png')
 
+        sigrelerr.Draw('colz text')
+        sigrelerr.GetYaxis().SetRange(0,400);
+        sigrelerr.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+'/'+plot_nm+'_sigrelerr.png')
+    
     os.system("cp "+wloc+'/index.php '+foldm)
 
+    
 def main():
-   for dm in dmass:
-       print "MASS:\t", dm
-       for reg in regions:
-           dmfol = dm
-           if "AN" in dm:
-               dmfol = dmass[dm]
-               print "Get AN masspoints", dmass[dm]
-           else:
-               dmmin = dmass[dm][0]
-               dmmax = dmass[dm][1]
+    for dm in dmass:
+        print "MASS:\t", dm
+        for reg in regions:
+            dmfol = dm
+            if "AN" in dm:
+                dmfol = dmass[dm]
+                print "Get AN masspoints", dmass[dm]
+            else:
+                dmmin = dmass[dm][0]
+                dmmax = dmass[dm][1]
 
-           foldm = folder + dmfol + '/' + reg
-           os.system("mkdir -p "+foldm)
+            foldm = folder +relstr + dmfol + '/' + reg
+            os.system("mkdir -p "+foldm)
 
 
-           sigunrol,bkgunrol, sigPtm, bkgPtm, sigMT2, bkgMT2, sig2D, bkg2D, signif2D=define_histos(reg,dm)
+            sigunrol,bkgunrol, sigPtm, bkgPtm, sigMT2, bkgMT2, sig2D, bkg2D, signif2D=define_histos(reg,dm)
            
-           nsig = addhistos(inpfile, dmass,dm,dmmin,dmmax,reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm)
-           make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D, nsig)
+            nsig = addhistos(inpfile, dmass,dm,dmmin,dmmax,reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm)
+            make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D, nsig)
+
+            #rangPtm, rangMT2=varbinfromprof()
+            print "Ptm:\t",rangPtm, "\nMT2:\t",rangMT2
+            nvarMT2=len(rangMT2)
+            nvarPtm=len(rangPtm)
 
 
-           #Make profiles (currently unused)
-           bkgprofX = bkg2D.ProfileX()
-           bkgprofY = bkg2D.ProfileY()
-           sigprofY = sig2D.ProfileY()
-
-           #Variable binning if want to reproduce AN binning
-           binAN  = True
-           varbin = 'varbin'
-           if(binAN is True):
-               varbin  = 'ANbin'
-               rangMT2 = [   0,  20,  40,  60,  80, 100, 120]
-               rangPtm = [ 100, 140, 200, 300]
-
-           #Otherwise pick binning from 1D distrib weights
-           else:
-               totWPtm = bkgPtm.GetSumOfWeights()
-               totWMT2 = bkgMT2.GetSumOfWeights()
-               wsumMT2 =   0
-               wYmax   = 500
-               wsumPtm =   0
-               binsMT2 = [0]
-               rangMT2 = [0]
-               binsPtm = [5]
-               rangPtm = [100]
-               wmaxPtm = 0.05*totWPtm
-               wmaxMT2 = 0.005*totWMT2#0.01
-
-               print "tot2\t", int(totWPtm), '\t',int(totWMT2)
-               for i in range(1,99):
-                   wbkgMT2 = bkgMT2.GetBinContent(i)
-                   wbkgPtm = bkgPtm.GetBinContent(i)
-
-                   if(wbkgPtm>0): wsumPtm+=wbkgPtm
-                   if(wbkgMT2>0): wsumMT2+=wbkgMT2
-                   if wsumPtm>wmaxPtm:
-                       wsumPtm = 0
-                       locPtm  = i*(hmaxPtm-hminPtm)/nPtm
-                       binsPtm.append(i)
-                       rangPtm.append(locPtm)
-                       print "Y:",locPtm, "\tnew bin", i
-                   if wsumMT2>wmaxMT2:
-                       wsumMT2 = 0
-                       locMT2  = i*(hmaxMT2-hminMT2)/nMT2
-                       binsMT2.append(i)
-                       rangMT2.append(locMT2)
-                       print "X:",locMT2, "\tnew bin"
-
-           print "Ptm:\t",rangPtm, "\nMT2:\t",rangMT2
-           nvarMT2=len(rangMT2)
-           nvarPtm=len(rangPtm)
+            #Define 2D histograms with the variable binwidth
+            vartitle    = "("+reg+"-"+dm+"); p_{T}^{miss}; m_{T2}^{ll}"
+            signiftitle = "s/#sqrt{s+b} "+vartitle
+            signifsqtit = "significance squared"+vartitle
+            nvarbinx  = len(rangPtm)-1
+            nvarbiny  = len(rangMT2)-1
+            varbinx   = array('d',rangPtm)
+            varbiny   = array('d',rangMT2)
+            bkgvar    = TH2D("bkgvar"+reg+dm,"bkg "   +vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            sigvar    = TH2D("sigvar"+reg+dm,"signal "+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            sigerr = TH2D("sigerr"+reg+dm,"sigerr"+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            sigrelerr = TH2D("sigrelerr"+reg+dm,"sigrelerr"+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            signifvar = TH2D("signifvar"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            signifvarsq = TH2D("signifvarsq"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
 
 
-           #Define 2D histograms with the variable binwidth
-           vartitle    = "("+reg+"-"+dm+"); p_{T}^{miss}; m_{T2}^{ll}"
-           signiftitle = "s/#sqrt{s+b} "+vartitle
-           signifsqtit = "significance squared"+vartitle
-           nvarbinx  = len(rangPtm)-1
-           nvarbiny  = len(rangMT2)-1
-           varbinx   = array('d',rangPtm)
-           varbiny   = array('d',rangMT2)
-           bkgvar    = TH2D("bkgvar"+reg+dm,"bkg "   +vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
-           sigvar    = TH2D("sigvar"+reg+dm,"signal "+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
-           signifvar = TH2D("signifvar"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr,sigerr)
 
-           fillvarbins(bkg2D,sig2D,bkgvar,sigvar)
+            fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2)
 
-           fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2)
-
-           statt=array('d',7*[0.])
-           e= signifvar.Integral()
-           print e, signifvar.Sumw2()
-           signifvarsq = TH2D("signifvarsq"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
-           signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
-           print signifvarsq.Integral()
-           draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin)
-
-   cpweb= 'cp -r '+folder+" "+ optim
-   #os.system(cpweb)
-   print cpweb    
+            signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
+            sigrelerr.Divide(sigerr,sigvar)
+            draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, dorelerr,sigerr,sigrelerr)
+            
+    cpweb= 'cp -r '+folder+" "+ optim
+    #os.system(cpweb)
+    print cpweb    
 if __name__ == "__main__":
     main()
 

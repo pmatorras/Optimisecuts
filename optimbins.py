@@ -191,7 +191,7 @@ for dm in dmass:
             dmmin = dmass[dm][0]
             dmmax = dmass[dm][1]
 
-        foldm = folder + dmfol + '/' + reg
+        foldm = folder + '/'+ dmfol + '/' + reg
         os.system("mkdir -p "+foldm)
 
         #Define necessary histograms                                                                                               

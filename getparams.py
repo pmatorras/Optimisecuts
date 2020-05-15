@@ -36,7 +36,7 @@ oot'
 Test=not(opt.all)
 inpfile = TFile (inpfnm, "READ")
 optim   = wloc+"/susy/optimisation/"
-folder  = "../Histograms/significance/"+year+'/'
+folder  = "../Histograms/significance/"+year
 hminMT2 =    0
 hmaxMT2 = 1000
 hminPtm =    0
