@@ -11,18 +11,16 @@ gStyle.SetOptStat(0);
 
 dorelerr=True
 relstr='/'
-optMT2= True #False
-optPtm= True
 rangMT2 = [   0,  20,  40,  60,  80, 100, 120]
 rangPtm = [ 100, 140, 200, 300]    
-if opt.AN is True:
+if opt.AN is True or True not in [opt.Ptm, opt.MT2]:
     varbin='ANbin'
 else:
     varbin='varbin'
-    if optMT2 is True:
+    if opt.MT2 is True:
         varbin+='_MT2'
         rangMT2 = [   0,  20,  40,  60,  80, 100, 160]
-    if optPtm is True:
+    if opt.Ptm is True:
         varbin+='_Ptm'
         rangPtm = [ 100, 160, 220,280, 380]
     
@@ -40,7 +38,7 @@ else:
    
 
 #Fill signal and bakground for variable binwidth
-def fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr=False, h_sigerr=None):
+def fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr=False, h_sigerrsq=None):
     for ibin in range(1, nPtm):
         for jbin in range(1, nMT2):
             bkg = bkg2D.GetBinContent(ibin, jbin)
@@ -52,26 +50,34 @@ def fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr=False, h_sigerr=None):
             if dorelerr is True:
                 sigerr= sig2D.GetBinError(ibin,jbin)
                 if(sig>0):
-                    #print locMT2, locPtm, "\t",sigerr/sig
-                    h_sigerr.Fill(locPtm,locMT2,sigerr)
+                    if sigerr/sig >1:
+                        print locMT2, locPtm, "\t",sig,"\t",sigerr
+                    h_sigerrsq.Fill(locPtm,locMT2,sigerr*sigerr)
             #if sig>0: print locPtm, locMT2, sig
 
 
 #Fill significance plot for variable binning
-def fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2):
+def fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2, dorelerr=False,sigerr=None, sigerrsq=None):
     #print "var", nvarPtm
     for xbin in range (0,nvarPtm+2): #0 is underflow, 2 overflow + range
         #print "xbin", xbin
         for ybin in range(0,nvarMT2+2):
             isig = sigvar.GetBinContent(xbin,ybin)
             ibkg = bkgvar.GetBinContent(xbin,ybin)
+            ierrsq = sigerrsq.GetBinContent(xbin,ybin)
             if(isig+ibkg>0):
                 signif = isig/np.sqrt(ibkg+isig)
+            
                 #print xbin, ybin, round(isig,3) #round(signif,3)
                 
             else: signif = 0
+            if ierrsq>=0:
+                ierr = np.sqrt(ierrsq)
+            else:
+                print "ierr negative"
+                exit()
             signifvar.SetBinContent(xbin, ybin, signif)
-            
+            sigerr.SetBinContent(xbin,ybin,ierr)
 
 
             
@@ -156,9 +162,12 @@ def make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D,nsig):
             y+=1
             x =0
         x+=1
+        iserr= sigunrol.GetBinError(i)/nsig
         isig = sigunrol.GetBinContent(i)/nsig
         ibkg = bkgunrol.GetBinContent(i)
-        if(isig>0): sig2D.SetBinContent(x,y,isig)
+        if(isig>=0):
+            sig2D.SetBinContent(x,y,isig)
+            sig2D.SetBinError(x,y,iserr)
         if(ibkg>=0):
             bkg2D.SetBinContent(x,y, ibkg)
             #if(x<10 and y<5):print x, y, ibkg
@@ -201,40 +210,46 @@ def varbinfromprof():
 
 
 #Draw histograms
-def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, drawerr=False, sigerr=None,sigrelerr=None):
+def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, drawerr=False, sigerr=None, sigerrsq=None, sigrelerr=None):
     c1 = TCanvas( 'c1', 'Dynamic Filling Example', 200,10, 1200, 900 )
     os.system('mkdir -p '+foldm)
     plot_nm=varbin+"-PtmissvsMT2"#+reg+'-'+dm+'.png'
 
-    if drawerr is False:
-        sigvar.Draw('colz text')
-        sigvar.GetYaxis().SetRange(0,400);
-        sigvar.GetXaxis().SetRange(0,800);
-        c1.SaveAs(foldm+"/"+plot_nm+'_signal.png')
+    sigvar.Draw('colz text')
+    sigvar.GetYaxis().SetRange(0,400);
+    sigvar.GetXaxis().SetRange(0,800);
+    c1.SaveAs(foldm+"/"+plot_nm+'_signal.png')
 
+    signifvar.Draw('colz text')
+    signifvar.GetYaxis().SetRange(0,400);
+    signifvar.GetXaxis().SetRange(0,800);
+    c1.SaveAs(foldm+'/'+plot_nm+'_signif.png')
+
+    if drawerr is False:
+        
 
         bkgvar.Draw('colz text')
         bkgvar.GetYaxis().SetRange(0,400);
         bkgvar.GetXaxis().SetRange(0,800);
         c1.SaveAs(foldm+"/"+plot_nm+'_bkg.png')
 
-
-        signifvar.Draw('colz text')
-        signifvar.GetYaxis().SetRange(0,400);
-        signifvar.GetXaxis().SetRange(0,800);
-        c1.SaveAs(foldm+'/'+plot_nm+'_signif.png')
-
-
         signifvarsq.Draw('colz text')
         signifvarsq.GetYaxis().SetRange(0,400);
         signifvarsq.GetXaxis().SetRange(0,800);
         c1.SaveAs(foldm+'/'+plot_nm+'_signifsq.png')
     elif drawerr is True:
-        print "relative error plot"
         sigerr.Draw('colz text')
         sigerr.GetYaxis().SetRange(0,400);
         sigerr.GetXaxis().SetRange(0,800);
         c1.SaveAs(foldm+'/'+plot_nm+'_sigerr.png')
+
+        paintsq=False
+        if paintsq is True:
+            gStyle.SetPaintTextFormat("2.3g");
+            sigerrsq.Draw('colz text')
+            sigerrsq.GetYaxis().SetRange(0,400);
+            sigerrsq.GetXaxis().SetRange(0,800);
+            c1.SaveAs(foldm+'/'+plot_nm+'_sigerrsq.png')
 
         sigrelerr.Draw('colz text')
         sigrelerr.GetYaxis().SetRange(0,400);
@@ -242,7 +257,6 @@ def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, drawerr=Fal
         c1.SaveAs(foldm+'/'+plot_nm+'_sigrelerr.png')
     
     os.system("cp "+wloc+'/index.php '+foldm)
-
     
 def main():
     for dm in dmass:
@@ -281,39 +295,27 @@ def main():
             varbiny   = array('d',rangMT2)
             bkgvar    = TH2D("bkgvar"+reg+dm,"bkg "   +vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
             sigvar    = TH2D("sigvar"+reg+dm,"signal "+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
-            sigerr = TH2D("sigerr"+reg+dm,"sigerr"+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
-            sigrelerr = TH2D("sigrelerr"+reg+dm,"sigrelerr"+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            sigerrsq  = TH2D("sigerr"+reg+dm,"sigerrsq "+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            sigerr    = TH2D("sigerr"+reg+dm,"sigerr "+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
+            sigrelerr = TH2D("sigrelerr"+reg+dm,"sigrelerr "+vartitle, nvarbinx, varbinx, nvarbiny, varbiny)
             signifvar = TH2D("signifvar"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
             signifvarsq = TH2D("signifvarsq"+reg+dm, signiftitle, nvarbinx, varbinx, nvarbiny, varbiny)
 
 
-            fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr,sigerr)
+            fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr,sigerrsq)
 
-            fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2)
+            fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2,dorelerr, sigerr, sigerrsq)
 
             signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
             sigrelerr.Divide(sigerr,sigvar)
-            draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, dorelerr,sigerr,sigrelerr)
-            
+            draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, dorelerr,sigerr, sigerrsq,sigrelerr)
+            #exit()
+
     cpweb= 'cp -r '+folder+" "+ optim
     #os.system(cpweb)
     print cpweb    
 if __name__ == "__main__":
     main()
-
-#old way to loop over the entries to fill the asymmetric histo
-def old_variablebinning():
-    for ibinf,i in enumerate(range(0,len(binsX))):
-        #if(i<binsX[0]):continue
-        for jbinf,j in enumerate(range(0,len(binsY))):
-           #if(j<binsY[0]):continue
-           if jbinf<1 or ibinf<1: continue
-           if j>4 or i>4: continue
-           for in_i in range(binsX[i-1], binsX[i]):
-               for in_j in range(binsY[j-1],binsY[j]):
-                   print i,"in x", in_i,"\t", j,"in y", in_j
-            #print ibinf,binsX[i],jbinf, binsY[j]
-           #, bkg2D.GetBinContent(i,j)
 
 
 

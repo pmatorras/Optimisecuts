@@ -7,7 +7,9 @@ usage = 'usage: %prog [options]'
 parser = optparse.OptionParser(usage)
 parser.add_option('--year', dest='year', help='which year to open', default='run2')
 parser.add_option('--var' , dest='var' , help='var to optimise', default='MT2')
-parser.add_option('--AN'  , dest='AN' , help='AN binning', default=False, action='store_true')
+parser.add_option('--AN'  , dest='AN'  , help='AN binning', default=False, action='store_true')
+parser.add_option('--MT2' , dest='MT2' , help='MT2 binning', default=False, action='store_true')
+parser.add_option('--Ptm' , dest='Ptm' , help='Ptm binning', default=False, action='store_true')
 parser.add_option('--all' , dest='all' , help='run only few plots', default=False, action='store_true')
 (opt, args) = parser.parse_args()
 
