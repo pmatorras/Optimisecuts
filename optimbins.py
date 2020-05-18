@@ -11,20 +11,33 @@ start_time = time.time()
 regions = ["combined"]#, "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
 dmass   = {"dm_1to200": [1,200]}
 #{"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
-binOriPtm = [160.0, 220.0, 280.0, 380.0]
-binOriMT2 = [80,100,120]
+optimOriPtm = [160.0, 220.0, 280.0, 380.0]
+optimOriMT2 = [80,100,120]
 binANPtm = [140, 200, 300]
 binANMT2 = [ 80, 100, 120]
-
+isPtm=opt.Ptm
+isMT2=opt.MT2
 print "--------------------------------------------------"
 print "VARIABLE TO OPTIMISE:\t", varOptim
 print "MC FOR YEAR:\t\t", year
 str_AN = ''
-if opt.AN is True:
+if opt.AN is True or True not in [opt.Ptm, opt.MT2]:
     str_AN = '_ANbin'
     print "USING AN BINNING"
     binOriPtm=binANPtm
     binOriMT2=binANMT2
+else:
+    str_AN="_Varbin"
+    if isMT2 is True:
+        if isPtm is True:
+            print "both variables are set to be true, pick only one"
+            exit()
+        str_AN+="_MT2"
+        binOriMT2=optimOriMT2
+    if isPtm is True:
+        str_AN+="_Ptm"
+        binOriPtm=optimOriPtm
+
 print "--------------------------------------------------"
 
 

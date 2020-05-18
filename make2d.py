@@ -64,20 +64,22 @@ def fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2, dorelerr=False,sigerr=
         for ybin in range(0,nvarMT2+2):
             isig = sigvar.GetBinContent(xbin,ybin)
             ibkg = bkgvar.GetBinContent(xbin,ybin)
-            ierrsq = sigerrsq.GetBinContent(xbin,ybin)
             if(isig+ibkg>0):
                 signif = isig/np.sqrt(ibkg+isig)
             
                 #print xbin, ybin, round(isig,3) #round(signif,3)
                 
             else: signif = 0
-            if ierrsq>=0:
-                ierr = np.sqrt(ierrsq)
-            else:
-                print "ierr negative"
-                exit()
             signifvar.SetBinContent(xbin, ybin, signif)
-            sigerr.SetBinContent(xbin,ybin,ierr)
+            
+            if dorelerr is True:
+                ierrsq = sigerrsq.GetBinContent(xbin,ybin)
+                if ierrsq>=0:
+                    ierr = np.sqrt(ierrsq)
+                else:
+                    print "ierr negative"
+                    exit()
+                sigerr.SetBinContent(xbin,ybin,ierr)
 
 
             
