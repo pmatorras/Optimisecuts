@@ -4,12 +4,13 @@ from array import array
 import numpy as np
 import time
 from getparams import *
+print inpfnm, m1min
 start_time= time.time()
 gROOT.SetBatch(True)
 gStyle.SetPaintTextFormat("4.3f");
 gStyle.SetOptStat(0);
 
-dorelerr=True
+dorelerr=opt.relerr
 relstr='/'
 rangMT2 = [   0,  20,  40,  60,  80, 100, 120]
 rangPtm = [ 100, 140, 200, 300]    
@@ -31,11 +32,16 @@ print opt.AN
 regions = ["combined", "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
 if dorelerr is True:
     relstr='_errors/'
-    dmass ={"MP-500_413": "mS-500_mX-413","MP-500_400": "mS-500_mX-400","MP-500_375": "mS-500_mX-375","MP-500_375": "mS-500_mX-375","MP-500_350": "mS-500_mX-350","MP-500_325": "mS-500_mX-325", "dm_1to200": [1,200]} #till 325
-    
+    if 'T2tt' in sig_nm:
+        dmass ={"MP-500_413": "mS-500_mX-413","MP-500_400": "mS-500_mX-400","MP-500_375": "mS-500_mX-375","MP-500_375": "mS-500_mX-375","MP-500_350": "mS-500_mX-350","MP-500_325": "mS-500_mX-325", "dm_1to200": [1,200]} #till 325
+    elif 'SlepSnu' in sig_nm:
+        dmass = {"all" : [1,1250]}
 else:
-    dmass   = {"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
-   
+    if 'T2tt' in sig_nm:
+        dmass   = {"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
+    elif 'SlepSnu' in sig_nm:
+        dmass  = {#"all":[1,1250],
+                  "mC800to1200": [1,1250]}
 
 #Fill signal and bakground for variable binwidth
 def fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr=False, h_sigerrsq=None):
@@ -58,7 +64,7 @@ def fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr=False, h_sigerrsq=None):
 
 #Fill significance plot for variable binning
 def fillsignif(bkgvar,sigvar,signifvar, nvarPtm, nvarMT2, dorelerr=False,sigerr=None, sigerrsq=None):
-    #print "var", nvarPtm
+    #print "var", nvarPtm, nvarMT2
     for xbin in range (0,nvarPtm+2): #0 is underflow, 2 overflow + range
         #print "xbin", xbin
         for ybin in range(0,nvarMT2+2):
@@ -98,7 +104,9 @@ def addhisto(sig, bkg, isSig,histnm, nsig, count=False):
     histo=inpfile.Get(histnm)
     #print "HISTO-->", histnm, isSig
     if(isSig is True):
-        if count is True: nsig+=1
+        if count is True:
+            nsig+=1
+            #print histnm, nsig
         sig.Add(histo)
     else: bkg.Add(histo)
     return nsig
@@ -107,10 +115,17 @@ def addhisto(sig, bkg, isSig,histnm, nsig, count=False):
 def addhistos(inpfile, dmass,dm, dmmin,dmmax, reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm):
     allhistos = getall(inpfile)
     nsig      = 0
+    global m1min, m1max
+    
+    dmsplit=dm.split(splitnm)
+    if len(dmsplit)>1:
+        m1min=int(dmsplit[1].split("to")[0])
+        m1max=int(dmsplit[1].split("to")[1])
+        print "MASSPOINTS IN RANGE", splitnm+":\t[",m1min,",",m1max,"]"
     #For a given region and dm, add all histograms
     for ihis, histloc in enumerate(allhistos):
         histnm = histloc[0]
-        hsplit = histnm.split('mS')
+        hsplit = histnm.split(splitnm)
         isSig  = False
         if(reg not in histnm and "comb" not in reg): continue
         if len(hsplit) >1:
@@ -118,12 +133,16 @@ def addhistos(inpfile, dmass,dm, dmmin,dmmax, reg, sigunrol,bkgunrol, sigMT2,bkg
             if "MP" in dm:
                 if dmass[dm] not in histnm: continue
             else:
+                #print "else", histnm
                 mass  = hsplit[1].replace('-','_').split('_')
-                mS    = int(mass[1])
-                mX    = int(mass[3])
-                dm_i  = mS-mX
-                if(mS<mSmin    or mS>mSmax  ): continue
-                if(dm_i<=dmmin or dm_i>dmmax): continue
+                m1    = int(mass[1])
+                m2    = int(mass[3])
+                dm_i  = m1-m2
+                if(m1<m1min    or m1>m1max  ): continue
+                if(dm_i<=dmmin or dm_i>dmmax):
+                    print "omittin", histnm
+                    continue
+                
         if 'ptmissmt2' in histnm:
             #print "nsig", nsig, histnm
             nsig = addhisto(sigunrol,bkgunrol,isSig,histnm, nsig,True)
@@ -277,7 +296,6 @@ def main():
 
 
             sigunrol,bkgunrol, sigPtm, bkgPtm, sigMT2, bkgMT2, sig2D, bkg2D, signif2D=define_histos(reg,dm)
-           
             nsig = addhistos(inpfile, dmass,dm,dmmin,dmmax,reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm)
             make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D, nsig)
 
@@ -311,7 +329,7 @@ def main():
             signifvarsq.Multiply(signifvar,signifvar)#,signifvar)
             sigrelerr.Divide(sigerr,sigvar)
             draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, dorelerr,sigerr, sigerrsq,sigrelerr)
-            #exit()
+            exit()
 
     cpweb= 'cp -r '+folder+" "+ optim
     #os.system(cpweb)

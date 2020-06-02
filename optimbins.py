@@ -9,12 +9,23 @@ start_time = time.time()
 
 
 regions = ["combined"]#, "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf"]
-dmass   = {"dm_1to200": [1,200]}
+if "T2tt" in sig_nm:
+    dmass   = {"dm_1to200" : [1,200]}
+elif "SlepSnu" in sig_nm:
+    dmass   = {"mC1000to1200": [1,1250]}
+        #"dm_1to1250": [800,1250]}
 #{"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
+
 optimOriPtm = [160.0, 220.0, 280.0, 380.0]
 optimOriMT2 = [80,100,120]
-binANPtm = [140, 200, 300]
-binANMT2 = [ 80, 100, 120]
+
+maxvarPtm = 400 #1.6*rangPtm[-1]
+maxvarMT2 = 200
+binANPtm  = [140, 200, 300]
+binANMT2  = [ 80, 100, 120]
+if "SlepSnu" in sig_nm:
+    maxvarMT2=400
+    binANMT2=[200,300]
 isPtm=opt.Ptm
 isMT2=opt.MT2
 print "--------------------------------------------------"
@@ -43,17 +54,16 @@ print "--------------------------------------------------"
 
 nvarMT2 = len(binOriMT2)
 nvarPtm = len(binOriPtm)
-maxvarPtm = 400 #1.6*rangPtm[-1]
-maxvarMT2 = 200
 nbinPtm  = len(binOriPtm)-1
 nbinMT2  = len(binOriMT2)-1
 vbinPtm  = array('d',binOriPtm)
 vbinMT2  = array('d',binOriMT2)
-print "MT2",nbinMT2
 
 #Draw test distributions
 def testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm):
+    name=''
     if idx is 0 :
+        name='ANbins'
         if isMT2:
             binning=array('d',binANMT2)
             nbinMT2=len(binANMT2)-1
@@ -61,19 +71,29 @@ def testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm):
             binning=array('d',binANPtm)
             nbinPtm=len(binANPtm)-1
     if idx is 1 :
+        name='varbinsStop'
         if isMT2:
-            binning = array('d',[90.,100.,160.])
-            nbinMT2 = 2
+            if "SlepSnu" in sig_nm:
+                binning = array('d',[100.,160.,320.])
+                nbinMT2 = 2
+
+            else:
+                binning = array('d',[80.,100.,160.])
+                nbinMT2 = 2
         elif isPtm:
             binning=array('d',[100.0,160.0,220.0,280.0, 380.0])
             nbinPtm=4
     if idx is 2:
+        name='varbinsSlepSnu'
         if isMT2:
-            emptySlot=True
+            nbinMT2 = 2
+            #binning = array('d',[80.,100.,160.,220.,320.])
+            binning = array('d',[160.,240.,370.])
+
         if isPtm:
-            nbinPtm=7
-            binning=array('d',[100.0,180.0,240.0,320.0,360.,400.,440., 460.0])
-    return nbinMT2,nbinPtm,binning
+            nbinPtm= 2
+            binning=array('d',[140.0,160.0,240.0])
+    return nbinMT2,nbinPtm,binning, name
 
 #Optimise binning for Ptm
 def optimBins(varOptim, vartitle):
@@ -92,7 +112,7 @@ def optimBins(varOptim, vartitle):
         wOri    = wPtm
         isPtm   = True
     elif "MT2" in varOptim:
-        nbinMax = 6
+        nbinMax = 4#6
         maxvar  = maxvarMT2
         binOri  = binOriMT2
         wOri    = wMT2
@@ -108,16 +128,16 @@ def optimBins(varOptim, vartitle):
     for nbin in range(1,nbinMax):
         if  (isPtm): nbinPtm=nbin
         elif(isMT2): nbinMT2=nbin
-        if Test is True and nbin is not 4: continue
+        if Test is True and nbin is not 3: continue
         allbincombPtm = (combinations(vbins,nbin+1))
         maxsignif=0
         postbinning=[]
         for idx,binning in enumerate(allbincombPtm):
             #if binning[0]>20: continue
-                
+            #print idx
             if Test is True:
-                if idx>1:break
-                nbinMT2,nbinPtm,binning =testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm)
+                if idx>2:break
+                nbinMT2,nbinPtm,binning, test_nm =testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm)
 
             varbini= array('d',binning)
             if  (isPtm): vbinPtm=varbini
@@ -127,7 +147,8 @@ def optimBins(varOptim, vartitle):
             signifvari   = TH2D("signifvar"+hnm+reg+dm, signiftitle   , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
             signifvarsqi = TH2D("signifvarsq"+hnm+reg+dm, signiftitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
             fillvarbins(bkg2D,sig2D,bkgvari,sigvari)
-            fillsignif(bkgvari,sigvari,signifvari,nbinPtm,nvarMT2)
+            #print "input", nbinPtm, nvarMT2
+            fillsignif(bkgvari,sigvari,signifvari,nbinPtm,nbinMT2)
             signifvarsqi.Multiply(signifvari,signifvari)#,signifvar)
             
             signifsq = signifvarsqi.Integral(0,nbinPtm+1,0,nbinMT2+1)
@@ -135,7 +156,7 @@ def optimBins(varOptim, vartitle):
             if signif > 1.001*maxsignif:  postbinning=[]
             if signif >  maxsignif:
                 maxsignif=signif
-                print "NEW MAX"
+                print "NEW MAX"#, nbinPtm, nbinMT2, vbinPtm
             if signif > 0.999*maxsignif:
                 postbinning.append(binning)
             if idx<3 or signif>0.999*maxsignif :
@@ -143,9 +164,9 @@ def optimBins(varOptim, vartitle):
                 printoutput = str(nbin)+' '+str(idx)+ "\t"+ sigstr+'\t '+str(binning)
                 os.system('echo "'+printoutput+ '">>output'+varOptim+".log")
                 print printoutput
-            foldm  = "test"
-            varbin = 'test'+str(idx)
-            if Test is True and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, varbin)
+            foldm  = "test/"+sig_nm
+            print draw, Test
+            if Test is True and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, test_nm+varOptim)
             del bkgvari, sigvari, signifvari, signifvarsqi
         nhistos=idx
         if isPtm: 
@@ -158,7 +179,7 @@ def optimBins(varOptim, vartitle):
 
 def write_bestbin(suffix=''):
     csv_fol="binning/"
-    csv_nm="bestbinning"+suffix
+    csv_nm="bestbinning-"+sig_nm+"_"+suffix
     if idx<25: csv_nm+="_test"
     binline=''
     str_AN=''
@@ -167,6 +188,7 @@ def write_bestbin(suffix=''):
     elif "MT2" in suffix: binline="Ptmiss binning:\t"+str(binOriPtm)
     with open(csv_nm+'.csv', mode='w') as employee_file:
         sig_txt = csv.writer(employee_file, delimiter='\t', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        sig_txt.writerow(["SIGNAL:", sig_nm])
         sig_txt.writerow(["----------------------------------------------"])
         sig_txt.writerow(['BEST BINNING to maximise significance'])
         sig_txt.writerow([binline+str_AN])
@@ -220,8 +242,6 @@ for dm in dmass:
         sig2D    = TH2D("sig2D"   +reg+dm, reg, nPtm, hminPtm, hmaxPtm,nMT2, hminMT2,hmaxMT2)
         bkg2D    = TH2D("bkgs2D"  +reg+dm, reg, nPtm, hminPtm, hmaxPtm,nMT2, hminMT2,hmaxMT2)
         signif2D = TH2D("signif2D"+reg+dm, reg, nPtm, hminPtm, hmaxPtm,nMT2, hminMT2,hmaxMT2)
-        mSmin = 400
-        mSmax = 700
         signif2D.SetTitle( "m_{T2ll} vs p_{T}^{miss} ("+reg+'-'+dm+")")
 	signif2D.SetYTitle("m_{T2ll} [GeV]")
         signif2D.SetXTitle("p_{T}^{miss} [GeV]")
@@ -232,4 +252,5 @@ for dm in dmass:
         make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D, nsig)
         idx, significances= optimBins(varOptim, vartitle)
         write_bestbin(varOptim+str_AN)
+        
         exit()
