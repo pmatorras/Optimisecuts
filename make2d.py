@@ -25,7 +25,7 @@ else:
         varbin+='_Ptm'
         rangPtm = [ 100, 160, 220,280, 380]
     
-print opt.AN
+print "AN bins", opt.AN
 
 
 #Main area
@@ -36,13 +36,16 @@ if dorelerr is True:
         dmass ={"MP-500_413": "mS-500_mX-413","MP-500_400": "mS-500_mX-400","MP-500_375": "mS-500_mX-375","MP-500_375": "mS-500_mX-375","MP-500_350": "mS-500_mX-350","MP-500_325": "mS-500_mX-325", "dm_1to200": [1,200]} #till 325
     elif 'SlepSnu' in sig_nm:
         dmass = {"all" : [1,1250]}
+    elif 'TChipmWW' in sig_nm:
+        dmass = {"mC1to400":[80,150]}
 else:
     if 'T2tt' in sig_nm:
         dmass   = {"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
     elif 'SlepSnu' in sig_nm:
         dmass  = {#"all":[1,1250],
                   "mC800to1200": [1,1250]}
-
+    elif 'TChipmWW' in sig_nm:
+        dmass = {"mC1to400":[80,150]}
 #Fill signal and bakground for variable binwidth
 def fillvarbins(bkg2D,sig2D,bkgvar,sigvar, dorelerr=False, h_sigerrsq=None):
     for ibin in range(1, nPtm):
@@ -122,6 +125,7 @@ def addhistos(inpfile, dmass,dm, dmmin,dmmax, reg, sigunrol,bkgunrol, sigMT2,bkg
         m1min=int(dmsplit[1].split("to")[0])
         m1max=int(dmsplit[1].split("to")[1])
         print "MASSPOINTS IN RANGE", splitnm+":\t[",m1min,",",m1max,"]"
+        #exit()
     #For a given region and dm, add all histograms
     for ihis, histloc in enumerate(allhistos):
         histnm = histloc[0]
@@ -140,7 +144,7 @@ def addhistos(inpfile, dmass,dm, dmmin,dmmax, reg, sigunrol,bkgunrol, sigMT2,bkg
                 dm_i  = m1-m2
                 if(m1<m1min    or m1>m1max  ): continue
                 if(dm_i<=dmmin or dm_i>dmmax):
-                    print "omittin", histnm
+                    if m1>400:print "ommitting", histnm
                     continue
                 
         if 'ptmissmt2' in histnm:
@@ -258,11 +262,16 @@ def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, drawerr=Fal
         signifvarsq.GetYaxis().SetRange(0,400);
         signifvarsq.GetXaxis().SetRange(0,800);
         c1.SaveAs(foldm+'/'+plot_nm+'_signifsq.png')
-    elif drawerr is True:
+    if drawerr is True:
         sigerr.Draw('colz text')
         sigerr.GetYaxis().SetRange(0,400);
         sigerr.GetXaxis().SetRange(0,800);
         c1.SaveAs(foldm+'/'+plot_nm+'_sigerr.png')
+
+        sigrelerr.Draw('colz text')
+        sigrelerr.GetYaxis().SetRange(0,400);
+        sigrelerr.GetXaxis().SetRange(0,800);
+        c1.SaveAs(foldm+'/'+plot_nm+'_sigrelerr.png')
 
         paintsq=False
         if paintsq is True:
@@ -272,10 +281,6 @@ def draw_histos(sigvar,bkgvar,signifvar, signifvarsq, foldm, varbin, drawerr=Fal
             sigerrsq.GetXaxis().SetRange(0,800);
             c1.SaveAs(foldm+'/'+plot_nm+'_sigerrsq.png')
 
-        sigrelerr.Draw('colz text')
-        sigrelerr.GetYaxis().SetRange(0,400);
-        sigrelerr.GetXaxis().SetRange(0,800);
-        c1.SaveAs(foldm+'/'+plot_nm+'_sigrelerr.png')
     
     os.system("cp "+wloc+'/index.php '+foldm)
     
@@ -294,7 +299,7 @@ def main():
             foldm = folder +relstr + dmfol + '/' + reg
             os.system("mkdir -p "+foldm)
 
-
+            print dmass, "DMASS"
             sigunrol,bkgunrol, sigPtm, bkgPtm, sigMT2, bkgMT2, sig2D, bkg2D, signif2D=define_histos(reg,dm)
             nsig = addhistos(inpfile, dmass,dm,dmmin,dmmax,reg, sigunrol,bkgunrol, sigMT2,bkgMT2,sigPtm,bkgPtm)
             make2D(sigunrol,bkgunrol, sig2D, bkg2D,signif2D, nsig)

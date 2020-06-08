@@ -12,10 +12,12 @@ regions = ["combined"]#, "VR1_Tag_sf", "VR1_Tag_em", "VR1_Veto_em", "VR1_Veto_sf
 if "T2tt" in sig_nm:
     dmass   = {"dm_1to200" : [1,200]}
 elif "SlepSnu" in sig_nm:
-    dmass   = {"mC1000to1200": [1,1250]}
+    dmass   = {"mC800to1200": [1,1250]}#,"MP1000-25":"mC-1000_mX-25"}
         #"dm_1to1250": [800,1250]}
 #{"all": [1,700],"ANMP":"mS-450_mX-325","dm_1to125": [1,125], "dm_125to200" : [125,200] , "dm_200to700": [200,700]}
-
+#elif "
+print dmass
+#exit()
 optimOriPtm = [160.0, 220.0, 280.0, 380.0]
 optimOriMT2 = [80,100,120]
 
@@ -25,7 +27,7 @@ binANPtm  = [140, 200, 300]
 binANMT2  = [ 80, 100, 120]
 if "SlepSnu" in sig_nm:
     maxvarMT2=400
-    binANMT2=[200,300]
+    binANMT2=[160,300]
 isPtm=opt.Ptm
 isMT2=opt.MT2
 print "--------------------------------------------------"
@@ -44,10 +46,14 @@ else:
             print "both variables are set to be true, pick only one"
             exit()
         str_AN+="_MT2"
-        binOriMT2=optimOriMT2
+        binOriMT2 = optimOriMT2
+        binOriPtm = binANPtm
     if isPtm is True:
         str_AN+="_Ptm"
-        binOriPtm=optimOriPtm
+        binOriPtm = optimOriPtm
+        binOriMT2 = binANMT2
+if   "Ptm" in varOptim: print "MT2    binnning:",binOriMT2
+elif "MT2" in varOptim: print "Ptmiss binnning:",binOriPtm
 
 print "--------------------------------------------------"
 
@@ -58,7 +64,7 @@ nbinPtm  = len(binOriPtm)-1
 nbinMT2  = len(binOriMT2)-1
 vbinPtm  = array('d',binOriPtm)
 vbinMT2  = array('d',binOriMT2)
-
+print "SIGNAL",sig_nm
 #Draw test distributions
 def testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm):
     name=''
@@ -74,7 +80,7 @@ def testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm):
         name='varbinsStop'
         if isMT2:
             if "SlepSnu" in sig_nm:
-                binning = array('d',[100.,160.,320.])
+                binning = array('d',[120.,250.,450,])#,320.])
                 nbinMT2 = 2
 
             else:
@@ -86,10 +92,15 @@ def testdistrib(idx,isMT2, isPtm, binning, nbinMT2, nbinPtm):
     if idx is 2:
         name='varbinsSlepSnu'
         if isMT2:
-            nbinMT2 = 2
-            #binning = array('d',[80.,100.,160.,220.,320.])
-            binning = array('d',[160.,240.,370.])
-
+            if "TChipmWW" in sig_nm:
+                binning = array('d',[80.,100., 120., 140., 160.])
+                nbinMT2 = 4
+            elif "SlepSnu" in sig_nm:
+                binning = array('d',[120.,240.,370.0])
+                nbinMT2 = 2
+            else:
+                nbinMT2 = 3
+                binning = array('d',[80.,100.,160.,220.,320.])
         if isPtm:
             nbinPtm= 2
             binning=array('d',[140.0,160.0,240.0])
@@ -146,11 +157,20 @@ def optimBins(varOptim, vartitle):
             sigvari      = TH2D("sigvar"+hnm+reg+dm,"signal "+vartitle, nbinPtm, vbinPtm, nbinMT2, vbinMT2)
             signifvari   = TH2D("signifvar"+hnm+reg+dm, signiftitle   , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
             signifvarsqi = TH2D("signifvarsq"+hnm+reg+dm, signiftitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
-            fillvarbins(bkg2D,sig2D,bkgvari,sigvari)
+            sigerr       = None
+            sigerrsq     = None
+            sigrelerr    = None
+            if dorelerr:
+                sigerr    = TH2D("sigerr"   +hnm+reg+dm, "sigerr"   + vartitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
+                sigerrsq  = TH2D("sigerrsq" +hnm+reg+dm, "sigerrsq" + vartitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
+                sigrelerr = TH2D("sigrelerr"+hnm+reg+dm, "sigrelerr"+ vartitle , nbinPtm, vbinPtm, nbinMT2, vbinMT2)
+            fillvarbins(bkg2D,sig2D,bkgvari,sigvari,dorelerr,sigerrsq)
             #print "input", nbinPtm, nvarMT2
-            fillsignif(bkgvari,sigvari,signifvari,nbinPtm,nbinMT2)
+            fillsignif(bkgvari,sigvari,signifvari,nbinPtm,nbinMT2, dorelerr,sigerr,sigerrsq)
             signifvarsqi.Multiply(signifvari,signifvari)#,signifvar)
-            
+
+            if dorelerr is True:    sigrelerr.Divide(sigerr,sigvari)
+ 
             signifsq = signifvarsqi.Integral(0,nbinPtm+1,0,nbinMT2+1)
             signif   = np.sqrt(signifsq)
             if signif > 1.001*maxsignif:  postbinning=[]
@@ -164,9 +184,8 @@ def optimBins(varOptim, vartitle):
                 printoutput = str(nbin)+' '+str(idx)+ "\t"+ sigstr+'\t '+str(binning)
                 os.system('echo "'+printoutput+ '">>output'+varOptim+".log")
                 print printoutput
-            foldm  = "test/"+sig_nm
-            print draw, Test
-            if Test is True and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, test_nm+varOptim)
+            foldm  = "../Histograms/Optimisation/"+sig_nm
+            if Test is True and draw is True: draw_histos(sigvari,bkgvari,signifvari, signifvarsqi, foldm, test_nm+varOptim, dorelerr, sigerr, sigerrsq, sigrelerr)
             del bkgvari, sigvari, signifvari, signifvarsqi
         nhistos=idx
         if isPtm: 

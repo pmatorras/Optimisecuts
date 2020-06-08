@@ -50,6 +50,12 @@ if "SlepSnu" in opt.sig:
     splitnm = 'mC'
     m1min = 1                              
     m1max = 1250 
+if "ChipmWW" in opt.sig:
+    inpfnm += 'TChipmWW_mC-100to500.root'
+    sig_nm  = 'TChipmWW'
+    splitnm = 'mC'
+    m1min = 1
+    m1max = 500
 
 print "INPUT FILE:", inpfnm
 Test=not(opt.all)
